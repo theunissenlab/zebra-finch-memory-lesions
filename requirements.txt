@@ -1,0 +1,7 @@
+jupyter==1.0.0
+matplotlib==3.2.1
+numpy==1.18.5
+pandas==1.0.4
+soundsig==1.9
+statsmodels==0.11.1
+wavio==0.0.4
