@@ -8,6 +8,8 @@ Data is organized into pandas dataframes.
 
 * Trial Data: Subject response data from all trials in the test across all days
 
+* Lesion Data: Data on NCM lesion size from 10 subjects
+
 * Test Contexts: The stages of the song learning ladder to cross reference with the Trial Data
 
 * Stimulus Files: WAV files played as stimuli during the test, referenced by Trial Data
@@ -38,6 +40,17 @@ Trial data represents the stimulus playback and behavioral response data for all
 |Test Context |String     | Test context (references Test Context table) |
 |Condition    |String     | Normally NaN, but for some tests that occured after a month without reinforcement, indicated by "MonthLater" |
 |Ladder Group |String     | Which stimulus set / ladder is being tested. One of PrelesionSet1, PostlesionSet1 (retest of previously learned data) and PostlesionSet2 (introduction of new vocalizers after lesion) |
+
+### Lesion Data
+
+| Column Name  | Data Type | Description |
+|--------------|-----------|-------------|
+|Subject       |String     |             |
+|Date_Lesioned |Date       |             |
+|LH_Lesion_Size|Float      |Left Hemisphere NCM lesion size measured in um^3|
+|RH_Lesion_Size|Float      |Right Hemisphere NCM lesion size measured in um^3|
+|Total_Lesion_Size| Float  |Total volume of NCM lesion measured in um^3, might not include hippocampal or cerrebellar lesioning volumes|
+|Hippocampus_Affected|Boolean|True if there was clear evidence of hippocampal lesioning in the histology|
 
 ### Test Context
 
