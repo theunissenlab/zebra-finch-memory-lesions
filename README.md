@@ -2,9 +2,13 @@
 
 ## Data
 
-Summaries of behavioral data and ephys data are located in BehavioralDataSummary.md and EphysDataSummary.md.
+Summaries of behavioral data and ephys data are located in [BehavioralDataSummary.md](BehavioralDataSummary.md) and [EphysDataSummary.md]( EphysDataSummary.md).
+
+Data directory should be placed in the top level of this project and can be downloaded from TBD
 
 ## Code
+
+This project implements functions for loading behavioral, lesion, and ephys data for our auditory memory project, as well as code for data analysis.
 
 ### Dependencies
 
