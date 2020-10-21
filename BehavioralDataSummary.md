@@ -14,10 +14,6 @@ Data is organized into pandas dataframes or summarized below
 
 * Stimulus Files: WAV files played as stimuli during the test, referenced by Trial Data (data/behavior/stimuli)
 
-* Stimulus File Metadata: Sex, Age, Lab recorded from?
-
-### Subject Data
-
 ### Trial Data
 
 Trial data represents the stimulus playback and behavioral response data for all trials and subjects. Data has been cleaned to remove trials triggered erroneously due to hardware issues (e.g. peck double registering due to button sensitivity, button getting stuck in the down position).
