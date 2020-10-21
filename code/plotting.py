@@ -12,7 +12,7 @@ class color_by_reward(object):
             return "#C62533"
 
 
-def plot_data(
+def plot_pecking_test_data(
         df,
         grouping,
         force_len=None,
@@ -22,6 +22,8 @@ def plot_data(
         tick_height=0.1,
         figsize=None
     ):
+    """Plot behavioral data from pecking test
+    """
 
     # Reindex the dataframe for plotting
     original_index = df.index
@@ -167,3 +169,18 @@ def set_oddsratio_yticks(ax, biggest, smallest=None):
     ax.set_yticklabels(labels, fontsize=16)
     ax.hlines(1, *plt.xlim(), linestyle="--", zorder=-1)
     ax.set_ylim(np.power(2., smallest), np.power(2., biggest))
+
+
+def plot_raster(spike_times, yrange=None, ax=None, **marker_kwargs):
+    if ax is None:
+        ax = plt.gca()
+
+    for i, spikes in enumerate(spike_times):
+        if yrange is None:
+            y = i
+        else:
+            y = yrange[0] + (yrange[1] - yrange[0]) * (i / len(spike_times))
+
+        ax.scatter(spikes, y * np.ones(len(spikes)), **marker_kwargs)
+
+    return ax

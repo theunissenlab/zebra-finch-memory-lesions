@@ -48,7 +48,7 @@ def load_spike_data():
 
     df["date"] = df["site"].apply(_parse_date)
     df = df.drop("good_trials", axis=1)
-    df = df.set_index(["unit_id", "file"]).sort_index()
+    df = df.sort_values(["unit_id", "stimulus_file"])
     return df
 
 
@@ -68,7 +68,7 @@ def load_ephys_stimulus(stim_file):
 
 
 def load_unit_waveforms(unit_id):
-    return np.load(os.path.join(DATADIR, "ephys", "unit_waveforms", unit_id))
+    return np.load(os.path.join(DATADIR, "ephys", "unit_waveforms", "{}.npz".format(unit_id)))
 
 
 __all__ = [
