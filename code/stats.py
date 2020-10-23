@@ -1,5 +1,8 @@
-import numpy as np
+from functools import partial
 
+import multiprocessing
+import numpy as np
+from multiprocessing import Pool
 from scipy.stats import hypergeom
 from scipy.optimize import curve_fit
 
@@ -111,23 +114,26 @@ def r_fisher(table, side="two.sided", zero_correction=True):
     return r_result[2][0], np.array(r_result[1]), r_result[0][0]
 
 
-def jackknife(samples, estimator):
+def jackknife(samples, estimator, **kwargs):
     """Compute standard error of statistic on given samples
 
     samples: numpy array of sampled values
     estimator: function that takes numpy array and estimates some statistic (e.g. np.mean)
+    **kwargs: function arguments to pass into the estimator
     
     Returns estimate of standard error of estimator
     """
-    jk_n = []
-    for i in range(len(samples)):
-        jk_n.append(estimator(np.concatenate([samples[:i], samples[i + 1:]])))
+    map_data = [np.concatenate([samples[:i], samples[i+1:]]) for i in range(len(samples))]
+
+    cores = multiprocessing.cpu_count()
+    with Pool(cores - 1) as p:
+        jk_n = p.map(partial(estimator, **kwargs), map_data)
     
     jk_n = np.array(jk_n)
-    jk_all = estimator(np.array(samples))
+    jk_all = estimator(np.array(samples), **kwargs)
     n = len(samples)
 
-    se = np.sqrt(((n - 1) / n) * np.sum((jk_n - jk_all) ** 2))
+    se = np.sqrt(((n - 1) / n) * np.sum((jk_n - jk_all) ** 2, axis=0))
     return se
 
 
