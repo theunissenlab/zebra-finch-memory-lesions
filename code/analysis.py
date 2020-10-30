@@ -99,12 +99,8 @@ def fit_kde(
     n_samples = int(np.round((time_range[1] - time_range[0]) * psth_sampling_rate))
     t_kde = (np.arange(n_samples) / psth_sampling_rate) + time_range[0]
 
-    spikes = np.concatenate(spike_times)
-    log_density = _log_density(spike_times, t_kde=t_kde, bandwidth=bandwidth)
-    spike_probability_density = np.exp(log_density)
-
     if estimate_std_error:
-        log_density_se = jackknife(spike_times, _log_density, t_kde=t_kde, bandwidth=bandwidth)
+        log_density, log_density_se = jackknife(spike_times, _log_density, t_kde=t_kde, bandwidth=bandwidth)
         ci_95_lower = np.exp(
             log_density - 2 * log_density_se
         )
@@ -113,8 +109,12 @@ def fit_kde(
             log_density + 2 * log_density_se
         )
     else:
+        log_density = _log_density(spike_times, t_kde=t_kde, bandwidth=bandwidth)
+        spike_probability_density = np.exp(log_density)
         ci_95_lower = None
         ci_95_upper = None
+
+    spikes = np.concatenate(spike_times)
 
     if return_rate:
         n_spikes = len(spikes)
@@ -134,6 +134,15 @@ class ResponseStrength:
     """
 
     @staticmethod
+    def count_spikes_in_time_window(spike_times, time_window=(0, 0.5)):
+        filtered_spike_rates = [
+            len(s[(s >= time_window[0]) & (s < time_window[1])]) / (time_window[1] - time_window[0])
+            for s in spike_times
+        ]
+        return filtered_spike_rates
+
+
+    @staticmethod
     def rate(spike_times, time_window=(0, 0.5)):
         """Calculates a response strength based on a time window
 
@@ -148,11 +157,13 @@ class ResponseStrength:
         =======
         Returns a mean and standard deviation of the estimated firing rate during the specified window
         """
-        filtered_spike_rates = [
-            len(s[(s >= time_window[0]) & (s < time_window[1])]) / (time_window[1] - time_window[0])
-            for s in spike_times
-        ]
-        return np.mean(filtered_spike_rates), jackknife(filtered_spike_rates, np.mean)
+        if not len(spike_times):
+            return None, None
+
+        filtered_spike_rates = ResponseStrength.count_spikes_in_time_window(
+            spike_times, time_window=time_window
+        )
+        return jackknife(filtered_spike_rates, np.mean, parallel=False)
 
     @staticmethod
     def _max_kde(spike_times, stim_duration=None, return_rate=True):
@@ -177,11 +188,12 @@ class ResponseStrength:
         Returns a max kde and jackknifed standard error
         """
         if compute_std_error:
-            se = jackknife(spike_times, ResponseStrength._max_kde, stim_duration=stim_duration, return_rate=True)
+            mean, se = jackknife(spike_times, ResponseStrength._max_kde, stim_duration=stim_duration, return_rate=True)
         else:
-            se = None
+            mean = ResponseStrength._max_kde(spike_times, stim_duration, return_rate=True)
+            se= None
 
-        return ResponseStrength._max_kde(spike_times, stim_duration, return_rate=True), se
+        return mean, se
 
     @staticmethod
     def max_response_baseline(spike_times, stim_duration, n_trials, iterations=40):

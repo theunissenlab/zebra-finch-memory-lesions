@@ -114,27 +114,38 @@ def r_fisher(table, side="two.sided", zero_correction=True):
     return r_result[2][0], np.array(r_result[1]), r_result[0][0]
 
 
-def jackknife(samples, estimator, **kwargs):
+def jackknife(samples, estimator, parallel=False, **kwargs):
     """Compute standard error of statistic on given samples
 
     samples: numpy array of sampled values
     estimator: function that takes numpy array and estimates some statistic (e.g. np.mean)
-    **kwargs: function arguments to pass into the estimator
-    
+
     Returns estimate of standard error of estimator
     """
-    map_data = [np.concatenate([samples[:i], samples[i+1:]]) for i in range(len(samples))]
-
-    cores = multiprocessing.cpu_count()
-    with Pool(cores - 1) as p:
-        jk_n = p.map(partial(estimator, **kwargs), map_data)
-    
-    jk_n = np.array(jk_n)
-    jk_all = estimator(np.array(samples), **kwargs)
+    jk_n = []
     n = len(samples)
 
-    se = np.sqrt(((n - 1) / n) * np.sum((jk_n - jk_all) ** 2, axis=0))
-    return se
+    # Compute the value of estimator over all n samples
+    jk_all = estimator(np.array(samples), **kwargs)
+
+    # Compute value of estimator for each combination of n-1 samples
+    map_data = [np.concatenate([samples[:i], samples[i+1:]]) for i in range(len(samples))]
+    if parallel:
+        cores = multiprocessing.cpu_count()
+        with Pool(cores - 1) as p:
+            jk_n = p.map(partial(estimator, **kwargs), map_data)
+    else:
+        jk_n = [partial(estimator, **kwargs)(s) for s in map_data]
+    jk_n = np.array(jk_n)
+
+    # Compute pseudo values for samples (in n -> inf limit)
+    jk_pseudo_values = [(n * jk_all - (n - 1) * jk_n[i]) for i in range(n)]
+
+    est_mean = np.mean(jk_pseudo_values)
+    est_var = (1 / n) * np.var(jk_pseudo_values)
+    est_sem = np.sqrt(est_var)
+
+    return est_mean, est_sem
 
 
 def get_odds_ratio_matrix(group1, group2, key):
@@ -191,7 +202,7 @@ def linreg(x, y):
     popt, pcov = curve_fit(lin, x, y)
     sigma_ab = np.sqrt(np.diagonal(pcov))
     residuals = y - lin(x, *popt)
-    
+
     ss_res = np.sum(residuals**2)
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -201,6 +212,5 @@ def linreg(x, y):
 
     def fit_fn(x):
         return lin(x, *popt)
-    
-    return popt, pcov, fit_fn, r_squared, r_adj, sigma_ab
 
+    return popt, pcov, fit_fn, r_squared, r_adj, sigma_ab
