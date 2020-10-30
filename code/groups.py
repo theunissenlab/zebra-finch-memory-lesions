@@ -5,7 +5,7 @@ def unfamiliar_songs(unit_df):
     return unit_df.query("exposure == 'unfamiliar' and call_type == 'song'")
 
 def familiar_dcs(unit_df):
-    return unit_df.query("exposure == 'unfamiliar' and call_type == 'dc'")
+    return unit_df.query("exposure == 'familiar' and call_type == 'dc'")
 
 def unfamiliar_dcs(unit_df):
     return unit_df.query("exposure == 'unfamiliar' and call_type == 'dc'")

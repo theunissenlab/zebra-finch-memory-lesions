@@ -12,6 +12,65 @@ class color_by_reward(object):
             return "#C62533"
 
 
+def _get_layout(n, max_columns=None):
+    w = 1
+    h = 1
+
+    increment_width = False
+    while w * h < n:
+        if increment_width and (not max_columns or w < max_columns):
+            w += 1
+        else:
+            h += 1
+        increment_width = not increment_width
+
+    return w, h
+
+
+def border(ax=None, left=False, right=False, top=False, bottom=False):
+    if ax is None:
+        ax = plt.gca()
+    ax.spines["left"].set_visible(left)
+    ax.spines["right"].set_visible(right)
+    ax.spines["top"].set_visible(top)
+    ax.spines["bottom"].set_visible(bottom)
+
+
+
+def fig_grid(n, ax_size=(3, 2), max_columns=None):
+    """Create a grid of n axes for plotting
+
+    Tries its best to keep the number of rows and columns even, up to a max number of columns
+
+    Params
+    ======
+    n: number of subplots to create
+    ax_size (tuple): width and height of each axis to create
+    max_columns: tries to keep number of rows and columns even, but will not go
+        above max_columns
+
+    Returns
+    =======
+    Returns a Figure refernce and a list of n matplotlib Axes objects
+    """
+    # dimension
+    w, h = _get_layout(n, max_columns=max_columns)
+
+    fig = plt.figure(figsize=ax_size)
+    axes = []
+
+    curr_x = 0
+    curr_y = 0
+    for i in range(n):
+        axes.append(fig.add_axes([curr_x + 0.1, curr_y + 0.1, 0.8, 0.8]))
+        curr_x += 1
+        if curr_x == w:
+            curr_x = 0
+            curr_y += 1
+
+    return fig, axes
+
+
 def plot_pecking_test_data(
         df,
         grouping,
@@ -175,12 +234,16 @@ def plot_raster(spike_times, yrange=None, ax=None, **marker_kwargs):
     if ax is None:
         ax = plt.gca()
 
-    for i, spikes in enumerate(spike_times):
-        if yrange is None:
-            y = i
-        else:
-            y = yrange[0] + (yrange[1] - yrange[0]) * (i / len(spike_times))
+    if yrange is None:
+        y_step = 1
+        y0 = 0
+    else:
+        y_step = (yrange[1] - yrange[0]) * (1 / len(spike_times))
+        y0 = yrange[0]
 
-        ax.scatter(spikes, y * np.ones(len(spikes)), **marker_kwargs)
+    for i, spikes in enumerate(spike_times):
+        y = y0 + i * y_step
+        # ax.scatter(spikes, y * np.ones(len(spikes)), **marker_kwargs)
+        ax.vlines(spikes, y, y + y_step, **marker_kwargs)
 
     return ax

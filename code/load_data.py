@@ -52,6 +52,26 @@ def load_spike_data():
     return df
 
 
+def load_auditory_info():
+    if not os.path.exists(os.path.join(DATADIR, "ephys", "AuditoryUnitTable.pkl")):
+        raise IOError("AuditoryUnitTable.pkl does not exist. May need to run notebook EPHYS3. Identify Auditory Units")
+
+    df = pd.read_pickle(os.path.join(DATADIR, "ephys", "AuditoryUnitTable.pkl"))
+    return df
+
+
+def load_rendition_data():
+    """Loads ephys data split into individual renditions
+
+    Derived from data loaded in load_ephys_data() but seperates each
+    sub-rendition of a trial into its own row, providing the columns
+    of "rendition_idx", "trial_onset", and "preceding_silence_duration"
+    as references to the original trial information.
+    """
+    df = pd.read_pickle(os.path.join(DATADIR, "ephys", "UnitRenditionData.pkl"))
+    return df
+
+
 def load_stim_data():
     df = pd.read_pickle(os.path.join(DATADIR, "ephys", "StimData.pkl"))
     return df
@@ -75,6 +95,7 @@ __all__ = [
     "load_behavioral_data",
     "load_lesion_data",
     "load_spike_data",
+    "load_rendition_data",
     "load_stim_data",
     "load_behavior_stimulus",
     "load_ephys_stimulus",

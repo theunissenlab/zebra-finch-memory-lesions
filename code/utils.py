@@ -22,9 +22,22 @@ def generate_synthetic_poisson_spike_times(firing_rate, duration, n_trials):
     return np.array([np.array(trial) for trial in trials])
 
 
+def clean_spike_times(spike_times):
+    """Collapse a list of lists of spike times while avoiding errors from empty datasets
+    """
+    if not len(spike_times):
+        return np.array([])
+    else:
+        arrs = [sts for sts in spike_times if len(sts)]
+        if not len(arrs):
+            return np.array([])
+        else:
+            return np.concatenate(arrs)
+
+
 class Colors:
     base_rewarded = "#0AA5D8"
-    base_nonrewared = "#C62533"
+    base_nonrewarded = "#C62533"
     song = "#F75F23"
     shuffled_song = "#FBA989"
     dc = "#3CAEA3"
