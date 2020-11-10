@@ -12,6 +12,15 @@ class color_by_reward(object):
             return "#C62533"
 
 
+def border(ax=None, left=False, right=False, top=False, bottom=False):
+    if ax is None:
+        ax = plt.gca()
+    ax.spines["left"].set_visible(left)
+    ax.spines["right"].set_visible(right)
+    ax.spines["top"].set_visible(top)
+    ax.spines["bottom"].set_visible(bottom)
+
+
 def _get_layout(n, max_columns=None):
     w = 1
     h = 1
@@ -27,17 +36,7 @@ def _get_layout(n, max_columns=None):
     return w, h
 
 
-def border(ax=None, left=False, right=False, top=False, bottom=False):
-    if ax is None:
-        ax = plt.gca()
-    ax.spines["left"].set_visible(left)
-    ax.spines["right"].set_visible(right)
-    ax.spines["top"].set_visible(top)
-    ax.spines["bottom"].set_visible(bottom)
-
-
-
-def fig_grid(n, ax_size=(3, 2), max_columns=None):
+def fig_grid(n, ax_size=(3, 2), max_columns=None, columns=None):
     """Create a grid of n axes for plotting
 
     Tries its best to keep the number of rows and columns even, up to a max number of columns
@@ -54,7 +53,11 @@ def fig_grid(n, ax_size=(3, 2), max_columns=None):
     Returns a Figure refernce and a list of n matplotlib Axes objects
     """
     # dimension
-    w, h = _get_layout(n, max_columns=max_columns)
+    if columns is not None:
+        w = columns
+        h = n // columns + 1 * bool(n % columns)
+    else:
+        w, h = _get_layout(n, max_columns=max_columns)
 
     fig = plt.figure(figsize=ax_size)
     axes = []

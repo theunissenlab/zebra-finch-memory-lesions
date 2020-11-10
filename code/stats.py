@@ -157,12 +157,20 @@ def get_odds_ratio_matrix(group1, group2, key):
     | #(group1[key] != True) | #(group2[key] != True) |
 
     """
-    contingency_table = [
-        [len(group1[group1[key] == True]),
-        len(group2[group2[key] == True])],
-        [len(group1[group1[key] == False]),
-        len(group2[group2[key] == False])]
-    ]
+    if key is None:
+        contingency_table = [
+            [len(group1[group1 == True]),
+            len(group2[group2 == True])],
+            [len(group1[group1 == False]),
+            len(group2[group2 == False])]
+        ]
+    else:
+        contingency_table = [
+            [len(group1[group1[key] == True]),
+            len(group2[group2[key] == True])],
+            [len(group1[group1[key] == False]),
+            len(group2[group2[key] == False])]
+        ]
 
     return np.array(contingency_table)
 
@@ -170,6 +178,7 @@ def get_odds_ratio_matrix(group1, group2, key):
 def compute_odds_ratio(
         group,
         versus,
+        key=None,
         zero_correction=True,
         side="two.sided",
     ):
@@ -179,7 +188,7 @@ def compute_odds_ratio(
     trials from two conditions. They each should have a boolean column
     named "Response" indicating behavioral response.
     """
-    table = get_odds_ratio_matrix(group, versus)    
+    table = get_odds_ratio_matrix(group, versus, key=key)
     odds, interval, pvalue = fisher_exact(table, side=side)
 
     return odds, interval, pvalue

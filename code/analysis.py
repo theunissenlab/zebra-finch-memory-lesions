@@ -101,6 +101,7 @@ def fit_kde(
 
     if estimate_std_error:
         log_density, log_density_se = jackknife(spike_times, _log_density, t_kde=t_kde, bandwidth=bandwidth)
+        spike_probability_density = np.exp(log_density)
         ci_95_lower = np.exp(
             log_density - 2 * log_density_se
         )
