@@ -4,6 +4,25 @@
 
 Summaries of behavioral data and ephys data are located in [BehavioralDataSummary.md](BehavioralDataSummary.md) and [EphysDataSummary.md]( EphysDataSummary.md).
 
+### Data File Summary
+
+```shell
+data/
+  behavior/
+    LesionData.csv    # <-- Included
+    TrialData.csv     # <-- Included
+    stimuli.zip       # <-- Included
+  ephys/
+    UnitData.pkl              # <-- Included
+    StimData.pkl              # <-- Included
+    UnitRenditionData.pkl     # <-- Splitting Individual Renditions notebook
+    AuditoryUnitTable.pkl     # <-- EPHYS3. Identify Auditory Units notebook
+    UnitCoherences.pkl        # <-- scripts/compute_coherences.py
+    RenditionCoherneces.pkl   # <-- scripts/compute_coherences.py
+    stimuli/                  # <-- Included
+    unit_waveforms/           # <-- Not Included
+```
+
 Data directory should be placed in the top level of this project (i.e. `zebra-finch-memory-lesions/data`) and can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1M76aCU6dXOHVGbm1duyboV_wILjh0Ovq?usp=sharing). Last count shows it as 356MB zipped. I excluded 20GB of unit waveforms data which would be located in `data/ephys/unit_waveforms`, so the function `load_data.load_unit_waveforms(unit_id)` will not be usable.
 
 ### Subject Data
