@@ -35,6 +35,20 @@ def clean_spike_times(spike_times):
             return np.concatenate(arrs)
 
 
+def yes_no(msg):
+    resp = None
+    while resp is None:
+        text = input(msg)
+        text = text.strip().lower()
+        if text in ["y", "yes", "yup", "absolutely"]:
+            resp = True
+        elif text in ["n", "no", "nope", "cancel"]:
+            resp = False
+        else:
+            resp = None
+    return resp
+
+
 class Colors:
     base_rewarded = "#0AA5D8"
     base_nonrewarded = "#C62533"

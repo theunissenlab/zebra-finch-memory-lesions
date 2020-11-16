@@ -1,3 +1,5 @@
+from itertools import product
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -36,7 +38,7 @@ def _get_layout(n, max_columns=None):
     return w, h
 
 
-def fig_grid(n, ax_size=(3, 2), max_columns=None, columns=None):
+def fig_grid(n, ax_size=(3, 2), max_columns=None, columns=None, xpad=0.0, ypad=0.0, start="top"):
     """Create a grid of n axes for plotting
 
     Tries its best to keep the number of rows and columns even, up to a max number of columns
@@ -47,6 +49,9 @@ def fig_grid(n, ax_size=(3, 2), max_columns=None, columns=None):
     ax_size (tuple): width and height of each axis to create
     max_columns: tries to keep number of rows and columns even, but will not go
         above max_columns
+    xpad (float, default=0): How much padding between figure columns
+    ypad (float, default=0): How much padding between figure rows
+    start (str, either "top" or "bottom"): Iterate over axes starting from top or from bottom
 
     Returns
     =======
@@ -62,6 +67,19 @@ def fig_grid(n, ax_size=(3, 2), max_columns=None, columns=None):
     fig = plt.figure(figsize=ax_size)
     axes = []
 
+    # Start from top
+    col_positions = [i * (1 + xpad) for i in range(w)]
+    row_positions = [i * (1 + ypad) for i in range(h)]
+    if start == "top":
+        row_positions = row_positions[::-1]
+    elif start == "bottom":
+        pass
+
+    ax_positions = list(product(col_positions, row_positions))[:n]
+    for pos_x, pos_y in ax_positions:
+        axes.append(fig.add_axes([pos_x + 0.1, pos_y + 0.1, 0.8, 0.8]))
+
+    return fig, axes
     curr_x = 0
     curr_y = 0
     for i in range(n):

@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
+from scipy.stats import ttest_ind
 from sklearn.neighbors import KernelDensity
 
 from load_data import load_ephys_stimulus
-from stats import jackknife
-from utils import generate_synthetic_poisson_spike_times
+from stats import false_discovery, jackknife
+from utils import clean_spike_times, generate_synthetic_poisson_spike_times
+
 
 
 def get_stimulus_timeseries(stimulus_file, time_range):
@@ -216,6 +218,191 @@ class ResponseStrength:
             _maxes.append(response)
 
         return np.mean(_maxes)
+
+
+class Auditory:
+
+    @staticmethod
+    def test_auditory_by_mean_rate(unit_df, delta_t=0.5):
+        """Perform a t-test to determine if the onset response is significant
+        """
+        spike_times = clean_spike_times(unit_df["spike_times"])
+        if not len(spike_times):
+            return 1.0
+
+        baseline_spike_counts = ResponseStrength.count_spikes_in_time_window(spike_times, time_window=(-delta_t, 0.0))
+        stim_spike_counts = ResponseStrength.count_spikes_in_time_window(spike_times, time_window=(0.0, delta_t))
+
+        return ttest_ind(baseline_spike_counts, stim_spike_counts).pvalue
+
+    @staticmethod
+    def is_auditory_by_mean_rate(unit_df, alpha=0.05, delta_t=0.5):
+        """Return true if the spiking data indicates a significant onset response
+
+        Averaged across all stimuli
+        """
+        return Auditory.test_auditory_by_mean_rate(unit_df, delta_t=delta_t) <= alpha
+
+    @staticmethod
+    def _test_stim_auditory_by_any_rate(stim_row, baseline_counts, alpha=None, delta_t=0.5):
+        """Test whether spike counts for given stimulus differs from baseline in any time window
+
+        Breaks up the stimulus into windows of time delta_t, and performs a t-test for spike
+        counts in all windows against a baseline set of spike counts. Either returns the minimum
+        p-value (multiplied by number of windows to adjust for multiple comparisons), or
+        the maximum significant p-value after a Benjamini-Hochberg correction for multiple
+        comparisons if a significant threshold is predefined.
+
+        Example
+        -------
+         Window 1  Window 2  Window 3  Window 4
+        [ p=0.10 ][ p=0.01 ][ p=0.02 ][ p=0.05 ]
+
+        * If alpha is None, will return the smallest p-value multipled by number of windows (i.e.
+          p = 0.01 * 4 = 0.04).
+        * If alpha is passed in as 0.05, Windows 2 and 3 will be found to be significant after
+          multiple comparisons correction, so the max significant p-value will be returned (i.e.
+          p = 0.02)
+
+        Params
+        ------
+        stim_row : pandas.core.series.Series
+            The dataframe row for the select stim. Should have an element "stim_duration",
+            a float indicating the stim duration in seconds, and "spike_times", a list of
+            lists of spike arrival times in seconds relative to trial onset.
+        baseline_counts : list
+            A list of counts of spike arrival times to compare spike counts for the given stim to
+        alpha : float, default=None
+            Significance threshold for multiple comparisons correction. If not specified, will
+            return the smallest p-value across all windows multiplied by the number of time windows
+        delta_t : float, default=0.5
+            Size of time windows to test
+
+        Returns
+        -------
+        A p-value describing the outcome of the test whether spike counts in any time window
+        for this stimulus differ from baseline
+        """
+        # Test all delta_t time windows of stim
+        windows = int((stim_row["stim_duration"] // delta_t) + 1)
+
+        stim_pvalues = np.ones(windows)
+        for i, t_window in enumerate(np.arange(windows) * delta_t):
+            stim_spike_counts = ResponseStrength.count_spikes_in_time_window(
+                stim_row["spike_times"],
+                time_window=(t_window, t_window + delta_t)
+            )
+            stim_pvalues[i] = ttest_ind(baseline_counts, stim_spike_counts).pvalue
+
+        # Multiple comparisons correction by multiplying the best pvalue by the number of
+        # comparisons (number of time windows)?
+        # I find that this is often too strict. Maybe I should do the max significant p-value
+        # under false discovery correction, with no multiple
+        if alpha is not None:
+            significance_mask = false_discovery(stim_pvalues, alpha=alpha)
+            if np.any(significance_mask):
+                return(np.max(stim_pvalues[significance_mask]))
+
+        return np.min(stim_pvalues) * windows
+
+    @staticmethod
+    def test_auditory_by_any_rate(unit_df, alpha=None, delta_t=0.5):
+        spike_times = clean_spike_times(unit_df["spike_times"])
+        if not len(spike_times):
+            return []
+
+        windows = -np.arange(1, 1 + np.floor(preceding_silence / delta_t)) * delta_t
+        baseline_counts = np.concatenate([
+            ResponseStrength.count_spikes_in_time_window(spike_times, time_window=(window, window + delta_t)) for window in windows
+        ])
+#         baseline_counts = ResponseStrength.count_spikes_in_time_window(
+#             spike_times,
+#             time_window=(-delta_t, 0.0)
+#         )
+
+        pvalues = []
+        for i in range(len(unit_df)):
+            row = unit_df.iloc[i]
+            pvalues.append(Auditory._test_stim_auditory_by_any_rate(
+                row,
+                baseline_counts,
+                alpha=alpha,
+                delta_t=delta_t
+            ))
+
+        return pvalues
+
+    @staticmethod
+    def is_auditory_by_any_rate(unit_df, alpha=0.05, delta_t=0.5):
+        """Return true if the spiking data indicates a significant auditory response to any stim
+        """
+        pvalues = Auditory.test_auditory_by_any_rate(unit_df, delta_t=delta_t, alpha=alpha)
+        return np.any(false_discovery(pvalues, alpha=alpha))
+
+    @staticmethod
+    def fraction_auditory_by_any_rate(unit_df, alpha=0.05, delta_t=0.5):
+        """Return fraction (0.0 to 1.0) of stims with a significant auditory at any time
+        """
+        pvalues = Auditory.test_auditory_by_any_rate(unit_df, delta_t=delta_t)
+        return np.mean(false_discovery(pvalues, alpha=alpha))
+
+    @staticmethod
+    def selectivity(unit_df, mode="rate", **kwargs):
+        """Calculate selectivity for all stims
+
+        The selectivity to each stim is calculated as the ratio
+        of the response strength to that stim divided by the mean response
+        strength across all stims
+        """
+        if mode not in ("rate", "max_response", "n_auditory"):
+            raise ValueError("mode must be either 'rate', 'max_response', or 'n_auditory'")
+
+        spike_times = [s for s in list(unit_df["spike_times"]) if len(s)]
+        if not len(spike_times):
+            return np.array([])
+
+        if mode == "rate":
+            if "time_window" not in kwargs:
+                kwargs["time_window"] = (0, 0.5)
+            spike_times = np.concatenate(spike_times)
+            mean_response = ResponseStrength.rate(spike_times, time_window=(0.0, 0.5))[0]
+
+            stim_responses = np.array([
+                ResponseStrength.rate(
+                    unit_df.iloc[i]["spike_times"], **kwargs)[0]
+                    if len(unit_df.iloc[i]["spike_times"])
+                    else 0
+                for i in range(len(unit_df))
+            ])
+        elif mode is "max_response":
+            if "stim_duration" not in kwargs:
+                kwargs["stim_duration"] = np.min(unit_df["stim_duration"])
+
+            stim_responses = np.array([
+                # We used to have a check that the length of spike_times was not zero...
+                ResponseStrength.max_response(unit_df.iloc[i]["spike_times"], **kwargs)[0]
+                for i in range(len(unit_df))
+            ])
+            mean_response = np.mean(stim_responses)
+
+        return stim_responses / mean_response
+
+    @staticmethod
+    def selectivity_index(unit_df, mode="rate", **kwargs):
+        """Return selectivity index for the given stimuli
+
+        The selectivity index (SI) is max response to a single stim divided
+        by the mean response over all stims.
+        """
+        if mode not in ("rate", "max_response", "n_auditory"):
+            raise ValueError("mode must be either 'rate', 'max_response', or 'n_auditory'")
+
+        if mode == "n_auditory":
+            return Auditory.fraction_auditory_by_any_rate(unit_df, **kwargs)
+        else:
+            selectivity = Auditory.selectivity(unit_df, mode=mode, **kwargs)
+            return np.max(selectivity)
+
 
 
 __all__ = [

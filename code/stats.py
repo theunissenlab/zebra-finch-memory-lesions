@@ -18,11 +18,11 @@ def false_discovery(pvalues, alpha=0.05):
     sorter = np.argsort(pvalues)
     n = len(pvalues)
     sig = np.zeros(n).astype(bool)
-    for idx, pvalue in enumerate(pvalues[sorter]):
-        if pvalue <= alpha * (idx + 1) / n:
-            sig[sorter[idx]] = True
-        else:
-            break
+    thresholds = alpha * (np.arange(n) + 1) / n
+
+    for i, (pvalue, threshold) in enumerate(zip(pvalues[sorter], thresholds)):
+        if pvalue <= threshold:
+            sig[sorter[:i + 1]] = True
 
     return sig
 
@@ -45,11 +45,11 @@ def _odds_ratio(table, zero_correction=True):
 
 def fisher_exact(table, side="two.sided", zero_correction=True):
     """Computes fisher exact odds ratio.
-    
+
     Output is almost exactly the same as scipy.stats.fisher_exact but here allows for
     using Haldane–Anscombe correction (substitutes 0.5 for 0 values in the table, whereas
     the scipy.stats version and R version fisher.test use integers only).
-    
+
     For 95% confidence interval, uses confidence intervals computed by R function fisher.test
     """
     if side not in ("greater", "less", "two.sided"):
@@ -67,7 +67,7 @@ def fisher_exact(table, side="two.sided", zero_correction=True):
 
     a_min = np.max([0, table[0][0] - table[1][1]])
     a_max = np.min([K, n])
-    
+
     p_observed = hypergeom(N, K, n).pmf(table[0][0])
     p_value = 0.0
     for a in np.arange(a_min, a_max + 1):
@@ -76,7 +76,7 @@ def fisher_exact(table, side="two.sided", zero_correction=True):
             [K - a, N - n - K + a]
         ])
         p = hypergeom(N, K, n).pmf(a)
-        
+
         if side == "greater":
             if _odds_ratio(possible_table)[0] >= odds_ratio:
                 p_value += p
@@ -183,7 +183,7 @@ def compute_odds_ratio(
         side="two.sided",
     ):
     """Compute odds ratio on an in group and out group
-   
+
     group and versus are pandas DataFrame objects representing
     trials from two conditions. They each should have a boolean column
     named "Response" indicating behavioral response.
@@ -223,3 +223,18 @@ def linreg(x, y):
         return lin(x, *popt)
 
     return popt, pcov, fit_fn, r_squared, r_adj, sigma_ab
+
+
+def bootstrap(func, *args, iters=10000):
+    """Return bootstrapped standard error for func with 1+ args
+    """
+    bootstrap_estimates = []
+    for _ in range(iters):
+        sampled_args = []
+        for arg in args:
+            sampled_args.append(
+                np.random.choice(arg, replace=True, size=len(arg))
+            )
+        bootstrap_estimates.append(func(*sampled_args))
+
+    return np.std(bootstrap_estimates)
