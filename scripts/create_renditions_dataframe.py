@@ -30,20 +30,20 @@ def create_split_dataframe(df, stim_df, stimulus_file_to_rendition_bounds):
     for row_idx in tqdm.tqdm(range(len(df))):
         row = df.iloc[row_idx]
         stimulus_file = row["stimulus_file"]
-        
+
         stim_bounds = stimulus_file_to_rendition_bounds[stimulus_file]
-        
+
         prev_rendition_stop_time = None
         for rendition_idx, (rendition_start_time, rendition_stop_time) in enumerate(stim_bounds):
             new_row = dict(row)
             new_row["spike_times"] = row["spike_times"] - rendition_start_time
             new_row["stim_duration"] = rendition_stop_time - rendition_start_time
             new_row["rendition_idx"] = rendition_idx
-            
+
             # Since there is no guarantee of a silence period duration before each rendition
             # We check here if there is enough time preceding this rendition to consider silence;
             # We also provide a timestamp of the trial onset.
-            
+
             # A 1s buffer was defined when the ephys trial data was first exported
             # Use this for the first renditions always
             if prev_rendition_stop_time is None:
@@ -53,12 +53,12 @@ def create_split_dataframe(df, stim_df, stimulus_file_to_rendition_bounds):
                     rendition_start_time
                     - prev_rendition_stop_time
                 )
-            
+
             new_row["trial_onset"] = -rendition_start_time
             prev_rendition_stop_time = rendition_stop_time
-            
+
             output_rows.append(new_row)
-            
+
     return pd.DataFrame(output_rows)
 
 

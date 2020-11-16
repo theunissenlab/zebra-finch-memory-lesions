@@ -14,7 +14,7 @@ from stats import (
 
 
 class TestStats(unittest.TestCase):
-    
+
     def test_false_discovery(self):
         """Test false_discovery implements the Handale-Anscombe correction"""
         p = np.array([0.05])
@@ -22,25 +22,25 @@ class TestStats(unittest.TestCase):
             false_discovery(p),
             np.array([True])
         )
-        
+
         p = np.array([0.04, 0.05])
         np.testing.assert_array_equal(
             false_discovery(p),
             np.array([True, True])
         )
-        
+
         p = np.array([0.04, 0.06])
         np.testing.assert_array_equal(
             false_discovery(p),
             np.array([False, False])
         )
-        
+
         p = np.array([0.02, 0.06])
         np.testing.assert_array_equal(
             false_discovery(p),
             np.array([True, False])
         )
-        
+
         p = np.array([0.06, 0.02])
         np.testing.assert_array_equal(
             false_discovery(p),
@@ -52,7 +52,7 @@ class TestStats(unittest.TestCase):
             false_discovery(p),
             np.array([False, False, False])
         )
-        
+
     def test_odds_ratio_zero_correction(self):
         a = np.array([
             [5, 4],
@@ -94,7 +94,7 @@ class TestStats(unittest.TestCase):
         OR, se = _odds_ratio(a, zero_correction=False)
         np.testing.assert_almost_equal(OR, 0.0)
         np.testing.assert_almost_equal(se, np.inf)
-        
+
         a = np.array([
             [1, 0],
             [7, 0]
@@ -105,10 +105,10 @@ class TestStats(unittest.TestCase):
 
     def test_jackknife(self):
         np.random.seed(420)
-        
+
         a = np.random.random(size=50)
         m, se = jackknife(a, np.mean)
-        
+
         true_mean = np.mean(a)
         true_se = np.std(a) / np.sqrt(len(a))
 
