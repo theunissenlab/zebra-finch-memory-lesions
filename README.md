@@ -15,10 +15,10 @@ data/
   ephys/
     UnitData.pkl              # <-- Included
     StimData.pkl              # <-- Included
-    UnitRenditionData.pkl     # <-- Splitting Individual Renditions notebook
+    UnitRenditionData.pkl     # <-- scripts/create_renditions_dataframe.py
     AuditoryUnitTable.pkl     # <-- EPHYS3. Identify Auditory Units notebook
     UnitCoherences.pkl        # <-- scripts/compute_coherences.py
-    RenditionCoherneces.pkl   # <-- scripts/compute_coherences.py
+    RenditionCoherences.pkl   # <-- scripts/compute_coherences.py
     stimuli/                  # <-- Included
     unit_waveforms/           # <-- Not Included
 ```
