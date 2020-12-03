@@ -24,12 +24,19 @@ def load_behavioral_data():
 
 def load_lesion_data():
     """Load pandas DataFrame from TrialData.csv"""
-    return pd.read_csv(
+    lesion_data = pd.read_csv(
         os.path.join(DATADIR, "behavior", "LesionData.csv"),
         converters={
             "Date_Lesioned": lambda d: pd.to_datetime(d).date()
         }
     )
+
+    if len(lesion_data) != 10:
+        raise Exception("The lesion data csv has been updated. You must update this function to drop"
+                       " the appropriate rows.")
+
+    lesion_data = lesion_data.drop(index=6).reindex()
+    return lesion_data
 
 
 def load_spike_data():

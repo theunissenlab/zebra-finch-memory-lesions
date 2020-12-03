@@ -212,7 +212,7 @@ def plot_pecking_test_data(
     return fig
 
 
-def set_oddsratio_yticks(ax, biggest, smallest=None):
+def set_oddsratio_yticks(ax, biggest, smallest=None, set_label=True):
     """Determine and set the yticks of an axis given the data range
 
     Generates a pleasant set of ytick labels and spacing for a given
@@ -244,7 +244,9 @@ def set_oddsratio_yticks(ax, biggest, smallest=None):
     ticks = np.power(2., vals)
     labels = [r"x{:d}".format(int(2 ** v)) if v >= 0 else r"x1/{:d}".format(int(2 ** -v)) for v in vals]
 
-    ax.set_ylabel("Odds Ratio", fontsize=16)
+    if set_label:
+        ax.set_ylabel("Odds Ratio", fontsize=16)
+
     ax.set_yticks(ticks)
     ax.set_yticklabels(labels, fontsize=16)
     ax.hlines(1, *plt.xlim(), linestyle="--", zorder=-1)
