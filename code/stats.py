@@ -138,6 +138,9 @@ def jackknife(samples, estimator, parallel=False, **kwargs):
         jk_n = [partial(estimator, **kwargs)(s) for s in map_data]
     jk_n = np.array(jk_n)
 
+    # TODO: Estimating psths with the psueodvalues method comes out really bad
+    # I don't know why at the moment so just skip that...
+
     # Compute pseudo values for samples (in n -> inf limit)
     jk_pseudo_values = [(n * jk_all - (n - 1) * jk_n[i]) for i in range(n)]
 

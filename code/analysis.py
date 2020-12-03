@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 from scipy.stats import ttest_ind
@@ -7,6 +9,8 @@ from load_data import load_ephys_stimulus
 from stats import false_discovery, jackknife
 from utils import clean_spike_times, generate_synthetic_poisson_spike_times
 
+
+logger = logging.getLogger(__name__)
 
 
 def get_stimulus_timeseries(stimulus_file, time_range):
@@ -87,7 +91,8 @@ def fit_kde(
     time_range (tuple): tuple of start time and stop time of psth in seconds relative to
         trial onset to generate psth from
     psth_sampling_rate (float): sampling rate of generated psth
-    bandwidth (float): bandwidth of gaussian kernel
+    bandwidth (float, default 0.03): bandwidth of gaussian kernel.
+        If "auto", uses 0.1 divided by number of trials. Otherwise, uses float value provided
     return_rate (bool): return kde as estimate of firing rate if True. If False, returns
         kde as a probability distribution
     estimate_std_error (bool, default False): use jackknife procedure
@@ -98,10 +103,14 @@ def fit_kde(
     t_arr: numpy array of time in seconds spanning time_range
     spike_density: the psth in normalized units (if return_rate was False) or in Hz
     """
+    if bandwidth == "auto":
+        bandwidth = 0.1 / len(spike_times)
+
     n_samples = int(np.round((time_range[1] - time_range[0]) * psth_sampling_rate))
     t_kde = (np.arange(n_samples) / psth_sampling_rate) + time_range[0]
 
     if estimate_std_error:
+        logging.warn("The jackknife method for the kde fit doesn't seem to work very well...")
         log_density, log_density_se = jackknife(spike_times, _log_density, t_kde=t_kde, bandwidth=bandwidth)
         spike_probability_density = np.exp(log_density)
         ci_95_lower = np.exp(
@@ -126,6 +135,8 @@ def fit_kde(
         if ci_95_lower is not None:
             ci_95_lower *= n_spikes / n_trials
             ci_95_upper *= n_spikes / n_trials
+    else:
+        spoike_density = spike_probability_density
 
     return t_kde, spike_density, (ci_95_lower, ci_95_upper)
 
