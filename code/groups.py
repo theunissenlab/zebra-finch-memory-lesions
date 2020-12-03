@@ -34,6 +34,12 @@ def familiar_test_dcs(unit_df):
 def familiar_nontest_dcs(unit_df):
     return unit_df.query("exposure == 'familiar' and relation != 'test' and call_type == 'dc'")
 
+def nontest_dcs(unit_df):
+    return unit_df.query("relation != 'test' and call_type == 'dc'")
+
+def nontest_songs(unit_df):
+    return unit_df.query("relation != 'test' and call_type == 'song'")
+
 def ripples(unit_df):
     return unit_df.query("call_type == 'ripple'")
 
@@ -45,3 +51,7 @@ def dcs(unit_df):
 
 def songs(unit_df):
     return unit_df.query("call_type == 'song'")
+
+def all(unit_df):
+    return unit_df
+

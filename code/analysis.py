@@ -144,7 +144,6 @@ class ResponseStrength:
         ]
         return filtered_spike_rates
 
-
     @staticmethod
     def rate(spike_times, time_window=(0, 0.5)):
         """Calculates a response strength based on a time window
@@ -169,12 +168,17 @@ class ResponseStrength:
         return jackknife(filtered_spike_rates, np.mean, parallel=False)
 
     @staticmethod
-    def _max_kde(spike_times, stim_duration=None, return_rate=True):
+    def _max_kde(
+            spike_times,
+            stim_duration=None,
+            return_rate=True,
+            normalize_to_trials=None,
+            ):
         t_arr, result, (ci_low, ci_high) = fit_kde(spike_times, (0, stim_duration), return_rate=True)
         return np.max(result)
 
     @staticmethod
-    def max_response(spike_times, stim_duration, compute_std_error=False):
+    def max_response(spike_times, stim_duration, normalized_trial_count=None, compute_std_error=False):
         """Calculates a response strength based on max kde
 
         Note that for low firing rates, the max kde is expected to be
@@ -190,6 +194,15 @@ class ResponseStrength:
         =======
         Returns a max kde and jackknifed standard error
         """
+        if normalized_trial_count is None:
+            pass
+        else:
+            _random_indexes = np.random.choice(
+                np.arange(len(spike_times)),
+                normalized_trial_count
+            )
+            spike_times = np.array(spike_times)[_random_indexes]
+
         if compute_std_error:
             mean, se = jackknife(spike_times, ResponseStrength._max_kde, stim_duration=stim_duration, return_rate=True)
         else:
@@ -306,19 +319,48 @@ class Auditory:
         return np.min(stim_pvalues) * windows
 
     @staticmethod
+    def _count_spikes_in_all_preceding_time_windows(unit_df, delta_t=0.5):
+        """Breaks up the silent period before each stim into windows of fixed size and reports spike counts
+        """
+
+    @staticmethod
     def test_auditory_by_any_rate(unit_df, alpha=None, delta_t=0.5):
         spike_times = clean_spike_times(unit_df["spike_times"])
         if not len(spike_times):
             return []
 
-        windows = -np.arange(1, 1 + np.floor(preceding_silence / delta_t)) * delta_t
-        baseline_counts = np.concatenate([
-            ResponseStrength.count_spikes_in_time_window(spike_times, time_window=(window, window + delta_t)) for window in windows
-        ])
-#         baseline_counts = ResponseStrength.count_spikes_in_time_window(
-#             spike_times,
-#             time_window=(-delta_t, 0.0)
-#         )
+        # This code uses the -delta_t time period as the baseline.
+        # The commented code below was an attempt to cut the silent period
+        # Preceding the stims into windows of delta_t (i.e. get more baseline
+        # windows)
+        baseline_counts = ResponseStrength.count_spikes_in_time_window(
+            spike_times,
+            time_window=(-delta_t, 0)
+        )
+
+        # Get spike times in all baseline time windows for every row
+        # Each row may have a different amount of
+        # windows = -np.arange(1, 1 + np.floor(1.0 / delta_t)) * delta_t
+#         if "preceding_silence_duration" not in unit_df.columns:
+#             windows = -np.arange(1, 1 + np.floor(1.0 / delta_t)) * delta_t
+#             baseline_counts = np.concatenate([
+#                 ResponseStrength.count_spikes_in_time_window(
+#                     spike_times,
+#                     time_window=(window, window + delta_t)
+#                 ) for window in windows
+#             ])
+#         else:
+#             baseline_counts = []
+#             for i in range(len(unit_df)):
+#                 row = unit_df.iloc[i]
+#                 windows = -np.arange(1, 1 + np.floor(row["preceding_silence_duration"] / delta_t)) * delta_t
+#                 new_counts = np.concatenate([
+#                     ResponseStrength.count_spikes_in_time_window(
+#                         [row["spike_times"]],
+#                         time_window=(window, window + delta_t)
+#                     ) for window in windows
+#                 ])
+#                 baseline_counts = np.concatenate([baseline_counts, new_counts])
 
         pvalues = []
         for i in range(len(unit_df)):
@@ -393,6 +435,20 @@ class Auditory:
 
         The selectivity index (SI) is max response to a single stim divided
         by the mean response over all stims.
+
+        Params
+        ======
+        unit_df : pd.DataFrame
+            rows of stimulus response data
+        mode : string (default="rate")
+            either "rate", "max_response", or "n_auditory"
+            kwargs specified are passed into the relevant function
+        kwargs : dict
+            arguments passed into the response functions to test for auditoryness
+            for rate, include a "time_window" tuple
+            for max_response, include a "duration"
+            for n_auditory, include an "alpha" value for significance tests and "delta_t"
+                for time window widths
         """
         if mode not in ("rate", "max_response", "n_auditory"):
             raise ValueError("mode must be either 'rate', 'max_response', or 'n_auditory'")
