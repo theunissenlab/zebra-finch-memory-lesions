@@ -400,12 +400,8 @@ class Auditory:
         return np.mean(false_discovery(pvalues, alpha=alpha))
 
     @staticmethod
-    def selectivity(unit_df, mode="rate", **kwargs):
-        """Calculate selectivity for all stims
-
-        The selectivity to each stim is calculated as the ratio
-        of the response strength to that stim divided by the mean response
-        strength across all stims
+    def stim_responses(unit_df, mode="rate", **kwargs):
+        """Return response strength across all units
         """
         if mode not in ("rate", "max_response", "n_auditory"):
             raise ValueError("mode must be either 'rate', 'max_response', or 'n_auditory'")
@@ -414,38 +410,57 @@ class Auditory:
         if not len(spike_times):
             return np.array([])
 
+        n = len(spike_times)
+
         if mode == "rate":
             if "time_window" not in kwargs:
                 kwargs["time_window"] = (0, 0.5)
-            spike_times = np.concatenate(spike_times)
-            mean_response = ResponseStrength.rate(spike_times, time_window=(0.0, 0.5))[0]
-
             stim_responses = np.array([
                 ResponseStrength.rate(
                     unit_df.iloc[i]["spike_times"], **kwargs)[0]
                     if len(unit_df.iloc[i]["spike_times"])
                     else 0
-                for i in range(len(unit_df))
+                for i in range(n)
             ])
+
         elif mode is "max_response":
             if "stim_duration" not in kwargs:
                 kwargs["stim_duration"] = np.min(unit_df["stim_duration"])
-
             stim_responses = np.array([
-                # We used to have a check that the length of spike_times was not zero...
                 ResponseStrength.max_response(unit_df.iloc[i]["spike_times"], **kwargs)[0]
-                for i in range(len(unit_df))
+                for i in range(n)
             ])
-            mean_response = np.mean(stim_responses)
 
-        return stim_responses / mean_response
+        return stim_responses
+
+    @staticmethod
+    def selectivity(unit_df, mode="rate", **kwargs):
+        """Calculate selectivity for all stims
+
+        The selectivity to each stim is calculated as the ratio
+        of the response strength to that stim divided by the mean response
+        strength across all stims
+        """
+        stim_responses = Auditory.stim_responses(unit_df, mode=mode, **kwargs)
+        n = len(stim_responses)
+        mean_response = np.mean(stim_responses)
+        mean_squared_response = np.mean(stim_responses ** 2)
+        SI = (1 - (mean_response ** 2 / mean_squared_response)) / (1 - (1/n))
+        return SI
 
     @staticmethod
     def selectivity_index(unit_df, mode="rate", **kwargs):
         """Return selectivity index for the given stimuli
 
-        The selectivity index (SI) is max response to a single stim divided
-        by the mean response over all stims.
+        The selectivity index (SI) is computed using the sparsness statistic defined in
+
+        *Vinje WE, Gallant JL (2000) Sparse coding and decorrelation in primary visual
+        cortex during natural vision. Science 287:1273–1276*
+
+        $SI = (1 - \frac{E(Z)^2}{E(Z^2)}) / (1 - \frac{1}{n})$
+
+        Where $E(Z)$ is the expected value of the response strength over all stimuli,
+        and $E(Z^2)$ is the expected value of the squared response strength over all stimuli.
 
         Params
         ======
@@ -467,8 +482,7 @@ class Auditory:
         if mode == "n_auditory":
             return Auditory.fraction_auditory_by_any_rate(unit_df, **kwargs)
         else:
-            selectivity = Auditory.selectivity(unit_df, mode=mode, **kwargs)
-            return np.max(selectivity)
+            return Auditory.selectivity(unit_df, mode=mode, **kwargs)
 
 
 

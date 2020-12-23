@@ -127,12 +127,14 @@ def run(unit_df):
         groups.nonrewarded_songs,
         groups.familiar_test_songs,
         groups.familiar_nontest_songs,
+        groups.nontest_songs,
         groups.familiar_dcs,
         groups.unfamiliar_dcs,
         groups.rewarded_dcs,
         groups.nonrewarded_dcs,
         groups.familiar_test_dcs,
         groups.familiar_nontest_dcs,
+        groups.nontest_dcs,
         groups.ripples,
         groups.songs,
         groups.dcs,
@@ -150,32 +152,19 @@ def run(unit_df):
 if __name__ == "__main__":
     ephys_data = load_spike_data()
     stim_data = load_stim_data()
-    auditory_info = load_auditory_info()
+    unit_summary = load_auditory_info()
     rendition_data = load_rendition_data()
     print("DATA LOADED")
 
-    auditory_unit_ids = auditory_info[
-         (auditory_info["auditory_by_rate"] | auditory_info["auditory_by_any"])   
-    ]["unit_id"]
-
-    unit_summary = ephys_data.merge(auditory_info, on="unit_id").groupby("unit_id").agg({
-        "subject": lambda x: x[0],
-        "electrode": lambda x: x[0],
-        "unit": lambda x: x[0],
-        "site": lambda x: x[0],
-        "snr": lambda x: x[0],
-        "spike_times": lambda x: list(clean_spike_times(x)),
-        "n_trials": "mean",
-        "isi_violation_pct": lambda x: x[0],
-        "fr": lambda x: x[0],
-        "auditory_by_rate": lambda x: x[0],
-        "auditory_by_any": lambda x: x[0]})
-
     units = unit_summary[
-        (unit_summary["snr"] > 5) &
-        (unit_summary["isi_violation_pct"] < 0.001) &
-        (unit_summary["n_trials"] > 8) &
-        ((unit_summary["auditory_by_rate"] == True) | (unit_summary["auditory_by_any"] == True))
+        (unit_summary["snr"] > 5)
+        & (unit_summary["isi_violation_pct"] < 0.001)
+        & (unit_summary["n_trials"] > 8)
+        & (
+            (unit_summary["auditory_onset_500ms"] == True)
+            | (unit_summary["auditory_in_any_200ms"] == True)
+            | (unit_summary["auditory_in_any_1s"] == True)
+        )
     ]
 
     print("UNITS SUMMARIZED")
@@ -189,5 +178,3 @@ if __name__ == "__main__":
     with multiprocessing.Pool(7) as p:
         results = p.map(run, unit_dfs)
     pd.DataFrame([x[1] for x in results]).to_pickle("/auto/fhome/kevin/Projects/zebra-finch-memory-lesions/data/ephys/RenditionCoherences.pkl")
-
-

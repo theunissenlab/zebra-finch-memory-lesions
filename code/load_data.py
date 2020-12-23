@@ -95,7 +95,11 @@ def load_ephys_stimulus(stim_file):
 
 
 def load_unit_waveforms(unit_id):
-    return np.load(os.path.join(DATADIR, "ephys", "unit_waveforms", "{}.npz".format(unit_id)))
+    with np.load(os.path.join(DATADIR, "ephys", "unit_waveforms", "{}.npz".format(unit_id))) as data:
+        return {
+            "spike_times": data["spike_times"],
+            "spike_waveforms": data["spike_waveforms"],
+        }
 
 
 __all__ = [
