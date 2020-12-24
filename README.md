@@ -16,7 +16,7 @@ data/
     UnitData.pkl              # <-- Included
     StimData.pkl              # <-- Included
     UnitRenditionData.pkl     # <-- scripts/create_renditions_dataframe.py
-    AuditoryUnitTable.pkl     # <-- EPHYS3. Identify Auditory Units notebook
+    AuditoryUnitTable.pkl     # <-- scripts/calculate_auditory_units.py
     UnitCoherences.pkl        # <-- scripts/compute_coherences.py
     RenditionCoherences.pkl   # <-- scripts/compute_coherences.py
     stimuli/                  # <-- Included
