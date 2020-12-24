@@ -176,6 +176,12 @@ class ResponseStrength:
         filtered_spike_rates = ResponseStrength.count_spikes_in_time_window(
             spike_times, time_window=time_window
         )
+
+        if len(filtered_spike_rates) == 1:
+            return filtered_spike_rates[0], np.nan
+        elif len(filtered_spike_rates) == 0:
+            return np.nan, np.nan
+
         return jackknife(filtered_spike_rates, np.mean, parallel=False)
 
     @staticmethod
@@ -257,6 +263,9 @@ class Auditory:
         baseline_spike_counts = ResponseStrength.count_spikes_in_time_window(spike_times, time_window=(-delta_t, 0.0))
         stim_spike_counts = ResponseStrength.count_spikes_in_time_window(spike_times, time_window=(0.0, delta_t))
 
+        if len(stim_spike_counts) < 2 or len(baseline_spike_counts) < 2:
+            return 1.0
+
         return ttest_ind(baseline_spike_counts, stim_spike_counts).pvalue
 
     @staticmethod
@@ -316,7 +325,10 @@ class Auditory:
                 stim_row["spike_times"],
                 time_window=(t_window, t_window + delta_t)
             )
-            stim_pvalues[i] = ttest_ind(baseline_counts, stim_spike_counts).pvalue
+            if len(stim_spike_counts) < 2 or len(baseline_counts) < 2:
+                stim_pvalues[i] = 1.0
+            else:
+                stim_pvalues[i] = ttest_ind(baseline_counts, stim_spike_counts).pvalue
 
         # Multiple comparisons correction by multiplying the best pvalue by the number of
         # comparisons (number of time windows)?
