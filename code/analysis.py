@@ -405,18 +405,11 @@ class Auditory:
         return np.any(false_discovery(pvalues, alpha=alpha))
 
     @staticmethod
-    def fraction_auditory_by_any_rate(unit_df, alpha=0.05, delta_t=0.5):
-        """Return fraction (0.0 to 1.0) of stims with a significant auditory at any time
-        """
-        pvalues = Auditory.test_auditory_by_any_rate(unit_df, delta_t=delta_t)
-        return np.mean(false_discovery(pvalues, alpha=alpha))
-
-    @staticmethod
     def stim_responses(unit_df, mode="rate", **kwargs):
         """Return response strength across all units
         """
-        if mode not in ("rate", "max_response", "n_auditory"):
-            raise ValueError("mode must be either 'rate', 'max_response', or 'n_auditory'")
+        if mode not in ("rate", "max_response"):
+            raise ValueError("mode must be either 'rate', 'max_response'")
 
         spike_times = [s for s in list(unit_df["spike_times"]) if len(s)]
         if not len(spike_times):
@@ -479,22 +472,17 @@ class Auditory:
         unit_df : pd.DataFrame
             rows of stimulus response data
         mode : string (default="rate")
-            either "rate", "max_response", or "n_auditory"
+            either "rate", "max_response"
             kwargs specified are passed into the relevant function
         kwargs : dict
             arguments passed into the response functions to test for auditoryness
             for rate, include a "time_window" tuple
             for max_response, include a "duration"
-            for n_auditory, include an "alpha" value for significance tests and "delta_t"
-                for time window widths
         """
         if mode not in ("rate", "max_response", "n_auditory"):
             raise ValueError("mode must be either 'rate', 'max_response', or 'n_auditory'")
 
-        if mode == "n_auditory":
-            return Auditory.fraction_auditory_by_any_rate(unit_df, **kwargs)
-        else:
-            return Auditory.selectivity(unit_df, mode=mode, **kwargs)
+        return Auditory.selectivity(unit_df, mode=mode, **kwargs)
 
 
 
