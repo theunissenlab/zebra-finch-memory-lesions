@@ -100,10 +100,18 @@ def plot_pecking_test_data(
         label_order=None,
         label_to_color=None,
         tick_height=0.1,
-        figsize=None
+        ticks=True,
+        reward_to_color=None,
+        figsize=None,
+        linekwargs=None,
+        mark_days=False,
     ):
     """Plot behavioral data from pecking test
     """
+    if reward_to_color is None:
+        reward_to_color = color_by_reward
+    if linekwargs is None:
+        linekwargs = {}
 
     # Reindex the dataframe for plotting
     original_index = df.index
@@ -127,36 +135,42 @@ def plot_pecking_test_data(
 
     events_ax = fig.gca()
     prob_ax = events_ax.twinx()
-
-    events_ax.set_ylim(-0.2 - tick_height * n_categories, 1.2 + tick_height * n_categories)
-    prob_ax.set_ylim(-0.2 - tick_height * n_categories, 1.2 + tick_height * n_categories)
-
+    
+    if ticks:
+        events_ax.set_ylim(-0.2 - tick_height * n_categories, 1.2 + tick_height * n_categories)
+        prob_ax.set_ylim(-0.2 - tick_height * n_categories, 1.2 + tick_height * n_categories)
+    else:
+        events_ax.set_ylim(-0.0, 1)
+        prob_ax.set_ylim(-0.0, 1)
+        
     for group_idx, (group_keys, group_df) in enumerate(groupings):
         # Interrupted trials will be plotted on top of plot (starting at y=1)
         # going in the positive direction
         # Non-interrupted trials will be plotted on bottom of plot (starting at y=0)
         # going in the negative direction
+        
         interrupted = group_df["Interrupt"].apply(lambda x: 1 if x else 0)
         increment_direction = group_df["Interrupt"].apply(lambda x: 1 if x else -1)
 
         # Plot event tick marks
-        scatter_plot = events_ax.scatter(
-            group_df.index,
-            (
-                ((1 * interrupted) + (2 * tick_height * increment_direction)) +  # tick base position
-                increment_direction * tick_height * group_idx                    # offset each group
-            ),
-            s=50,
-            marker="|",
-            color=color_by_reward.get(group_keys),
-            label=" ".join(group_keys)
-        )
+        if ticks:
+            scatter_plot = events_ax.scatter(
+                group_df.index,
+                (
+                    ((1 * interrupted) + (2 * tick_height * increment_direction)) +  # tick base position
+                    increment_direction * tick_height * group_idx                    # offset each group
+                ),
+                s=50,
+                marker="|",
+                color=reward_to_color.get(group_keys),
+                label=" ".join(group_keys)
+            )
 
-        events_ax.vlines(x=0, ymin=1 + tick_height, ymax=1.3 + tick_height * n_categories, color='black', linewidth=2)
-        events_ax.vlines(x=0, ymin=-0.3 - tick_height * n_categories, ymax=-tick_height, color='black', linewidth=2)
+            events_ax.vlines(x=0, ymin=1 + tick_height, ymax=1.3 + tick_height * n_categories, color='black', linewidth=2)
+            events_ax.vlines(x=0, ymin=-0.3 - tick_height * n_categories, ymax=-tick_height, color='black', linewidth=2)
 
         # Plot a line showing windowed probability of interruption
-        win_size=20
+        win_size=20 if group_keys[0] == "Nonrewarded" else 12
         win_size_half = win_size // 2
         rolled = group_df["Interrupt"].rolling(win_size, center=True).mean()
 
@@ -165,18 +179,30 @@ def plot_pecking_test_data(
             rolled.iloc[:win_size_half] = rolled.iloc[win_size_half]
             rolled.iloc[-win_size_half:] = rolled.iloc[-win_size_half - 1]
 
+        kwargs = dict(
+            label=scatter_plot.get_label() if ticks else None,
+            alpha=1.0,
+            linewidth=3,
+            color=reward_to_color.get(group_keys),
+        )
+        kwargs.update(linekwargs)
+        
         prob_ax.plot(
             group_df.index,
             rolled,
-            label=scatter_plot.get_label(),
-            alpha=1.0,
-            linewidth=3,
-            color=scatter_plot.get_edgecolor()[0]
+            **kwargs
         )
+        
+    if mark_days:
+        import datetime
+        # Draw vertical lines where trials transition days
+        idx = np.where(df["Date"].diff() >= datetime.timedelta(days=1))[0]
+        prob_ax.vlines(idx, *prob_ax.get_ylim(), linestyle="-", color="Black", zorder=100, linewidth=0.5)
 
 
     # Draw borders between probability plot and trial ticks, stylize by shading background
-    events_ax.hlines([-0.01, 1.01], *events_ax.get_xlim(), linewidth=2, linestyle=":", color="Grey")
+    if ticks:
+        events_ax.hlines([-0.01, 1.01], *events_ax.get_xlim(), linewidth=2, linestyle=":", color="Grey")
     events_ax.fill_between(events_ax.get_xlim(), [-0.01, -0.01], [1.01, 1.01], color="0.95", zorder=0)
 
     prob_ax.set_xlim(0, force_len or len(df))
@@ -202,17 +228,18 @@ def plot_pecking_test_data(
     prob_ax.spines['left'].set_visible(False)
 
     # Label tick marks
-    events_ax.text(0, 1 + (2 * tick_height) + tick_height * 0.5 * n_categories, "Int.  ", fontsize=16, horizontalalignment="right", verticalalignment="center")
-    events_ax.text(0, -(2 * tick_height) - tick_height * 0.5 * n_categories, "Wait  ",  fontsize=16, horizontalalignment="right", verticalalignment="center")
+    if ticks:
+        events_ax.text(0, 1 + (2 * tick_height) + tick_height * 0.5 * n_categories, "Int.  ", fontsize=16, horizontalalignment="right", verticalalignment="center")
+        events_ax.text(0, -(2 * tick_height) - tick_height * 0.5 * n_categories, "Wait  ",  fontsize=16, horizontalalignment="right", verticalalignment="center")
 
-    events_ax.vlines(x=0, ymin=0, ymax=1, color='black', linewidth=2)
+        events_ax.vlines(x=0, ymin=0, ymax=1, color='black', linewidth=2)
 
     df.index = original_index
 
     return fig
 
 
-def set_oddsratio_yticks(ax, biggest, smallest=None, set_label=True):
+def set_oddsratio_yticks(ax, biggest, smallest=None, convert_log=True, set_label=True):
     """Determine and set the yticks of an axis given the data range
 
     Generates a pleasant set of ytick labels and spacing for a given
@@ -232,7 +259,8 @@ def set_oddsratio_yticks(ax, biggest, smallest=None, set_label=True):
     if smallest >= -1:
         smallest = -1
 
-    ax.set_yscale("log")
+    if convert_log:
+        ax.set_yscale("log")
 
     abs_biggest = max(np.abs(smallest), np.abs(biggest))
 
@@ -240,8 +268,13 @@ def set_oddsratio_yticks(ax, biggest, smallest=None, set_label=True):
     n = len(powers)
     powers = powers[::n // 6 + 1]
     vals = np.concatenate([-powers, powers[1:]])
+    vals = vals[(vals >= smallest) & (vals <= biggest)]
 
-    ticks = np.power(2., vals)
+    if convert_log:
+        ticks = np.power(2., vals)
+    else:
+        ticks = vals
+        
     labels = [r"x{:d}".format(int(2 ** v)) if v >= 0 else r"x1/{:d}".format(int(2 ** -v)) for v in vals]
 
     if set_label:
@@ -249,9 +282,10 @@ def set_oddsratio_yticks(ax, biggest, smallest=None, set_label=True):
 
     ax.set_yticks(ticks)
     ax.set_yticklabels(labels, fontsize=16)
-    ax.hlines(1, *plt.xlim(), linestyle="--", zorder=-1)
-    ax.set_ylim(np.power(2., smallest), np.power(2., biggest))
 
+    if convert_log:
+        ax.hlines(1, *plt.xlim(), linestyle="--", zorder=-1)
+        ax.set_ylim(np.power(2., smallest), np.power(2., biggest))
 
 def plot_raster(spike_times, yrange=None, ax=None, **marker_kwargs):
     if ax is None:

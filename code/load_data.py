@@ -1,4 +1,5 @@
 import datetime
+import glob
 import os
 
 import numpy as np
@@ -31,7 +32,7 @@ def load_lesion_data():
         }
     )
 
-    if len(lesion_data) != 10:
+    if len(lesion_data) != 22:
         raise Exception("The lesion data csv has been updated. You must update this function to drop"
                        " the appropriate rows.")
 
@@ -44,7 +45,13 @@ def load_spike_data():
 
     # TODO eventually apply these to the original dataframe so we dont have to compute it every time we load
     df["n_trials"] = df.apply(lambda row: np.sum(row["good_trials"]), axis=1)
-    df["spike_times"] = df.apply(lambda row: np.array(row["spike_times"])[np.array(row["good_trials"])], axis=1)
+
+    def _filter_good_spike_times(row):
+        return [
+            spike_times for good, spike_times in zip(row["good_trials"], row["spike_times"]) if good
+        ]
+
+    df["spike_times"] = df.apply(_filter_good_spike_times, axis=1)
     df["subject"] = df["site"].apply(lambda site: site.split("_")[0])
     def _parse_date(site):
         date_str = site.split("_")[1]
@@ -94,8 +101,13 @@ def load_ephys_stimulus(stim_file):
     return wavio.read(os.path.join(DATADIR, "ephys", "stimuli", stim_file))
 
 
-def load_unit_waveforms(unit_id):
-    with np.load(os.path.join(DATADIR, "ephys", "unit_waveforms", "{}.npz".format(unit_id))) as data:
+def load_unit_waveforms(unit_id, t_pre_post=None):
+    if t_pre_post is None:
+        target_file = os.path.join(DATADIR, "ephys", "unit_waveforms", "{}.npz".format(unit_id))
+    else:
+        target_file = os.path.join(DATADIR, "ephys", "unit_waveforms_{}_{}".format(*t_pre_post), "{}.npz".format(unit_id))
+    with np.load(target_file) as data:
+        return dict(data)
         return {
             "spike_times": data["spike_times"],
             "spike_waveforms": data["spike_waveforms"],

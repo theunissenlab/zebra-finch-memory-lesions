@@ -152,10 +152,10 @@ def run(unit_df):
         groups.dcs,
     ]
 
-    results, fig = compare_coherence_and_information(unit_df, *splits)
+    results, fig = compare_coherence_and_information(unit_df, *splits, plot_figs=True)
 
     if fig:
-        fig.savefig(os.path.join(PROJECT_ROOT, "data", "ephys", "coherence_plots", "{}.svg".format(unit_id), format="svg")
+        fig.savefig(os.path.join(PROJECT_ROOT, "data", "ephys", "coherence_plots", "{}.svg".format(unit_id)), format="svg")
         plt.close(fig)
 
     return results

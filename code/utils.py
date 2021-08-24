@@ -28,11 +28,14 @@ def clean_spike_times(spike_times):
     if not len(spike_times):
         return np.array([])
     else:
-        arrs = [sts for sts in spike_times if len(sts)]
+        arrs = []
+        for sts in spike_times:
+            arrs += list(sts)
+
         if not len(arrs):
             return np.array([])
         else:
-            return np.concatenate(arrs)
+            return np.array(arrs)
 
 
 def yes_no(msg):

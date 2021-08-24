@@ -90,5 +90,8 @@ if __name__ == "__main__":
         stim_data,
         _stim_rendition_bounds
     )
+
+    ephys_rendition_data.to_pickle(output_path)
+
     print("Created dataframe split by rendition "
           "in {:.2f} seconds\n{}".format(time.time() - run_start, output_path))

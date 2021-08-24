@@ -3,6 +3,7 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), "code"))
 
 import unittest
+import warnings
 
 import numpy as np
 
@@ -79,11 +80,19 @@ class TestStats(unittest.TestCase):
         np.testing.assert_almost_equal(se, 2.19089023)
 
     def test_odds_ratio_no_zero_correction(self):
+        """Test that _odds_ratio doesn't break when no-zero correction is requested
+
+        Tests for divide by zero runtime warnings since they are expected.
+        """
         a = np.array([
             [5, 4],
             [7, 2]
         ])
-        OR, se = _odds_ratio(a, zero_correction=False)
+
+        with warnings.catch_warnings(record=True) as warnings_:
+            OR, se = _odds_ratio(a, zero_correction=False)
+            self.assertEqual(len(warnings_), 0)
+
         np.testing.assert_almost_equal(OR, 0.3571429)
         np.testing.assert_almost_equal(se, 1.0453981)
 
@@ -91,7 +100,10 @@ class TestStats(unittest.TestCase):
             [0, 4],
             [7, 2]
         ])
-        OR, se = _odds_ratio(a, zero_correction=False)
+
+        with self.assertWarns(RuntimeWarning):
+            OR, se = _odds_ratio(a, zero_correction=False)
+
         np.testing.assert_almost_equal(OR, 0.0)
         np.testing.assert_almost_equal(se, np.inf)
 
@@ -99,7 +111,10 @@ class TestStats(unittest.TestCase):
             [1, 0],
             [7, 0]
         ])
-        OR, se = _odds_ratio(a, zero_correction=False)
+
+        with self.assertWarns(RuntimeWarning):
+            OR, se = _odds_ratio(a, zero_correction=False)
+
         np.testing.assert_almost_equal(OR, np.nan)
         np.testing.assert_almost_equal(se, np.inf)
 

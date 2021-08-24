@@ -225,6 +225,8 @@ def linreg(x, y):
     def fit_fn(x):
         return lin(x, *popt)
 
+    print(r_squared, r_adj, n, k)
+
     return popt, pcov, fit_fn, r_squared, r_adj, sigma_ab
 
 
