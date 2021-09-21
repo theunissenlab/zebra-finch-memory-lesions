@@ -7,8 +7,11 @@ import pandas as pd
 import wavio
 
 
-CODEDIR, _ = os.path.split(__file__)
-DATADIR = os.path.join(CODEDIR, "..", "data")
+if os.environ["DATADIR"]:
+    DATADIR = os.environ["DATADIR"]
+else:
+    _CODEDIR, _ = os.path.split(__file__)
+    DATADIR = os.path.join(_CODEDIR, "..", "data")
 
 
 def load_behavioral_data():
@@ -34,7 +37,7 @@ def load_lesion_data():
 
     if len(lesion_data) != 22:
         raise Exception("The lesion data csv has been updated. You must update this function to drop"
-                       " the appropriate rows.")
+                       " the appropriate rows (GreOra0819F was not part of the experiment).")
 
     lesion_data = lesion_data.drop(index=6).reindex()
     return lesion_data
