@@ -6,10 +6,6 @@ from multiprocessing import Pool
 from scipy.stats import hypergeom
 from scipy.optimize import curve_fit
 
-import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
-stats = importr('stats')
-
 
 def false_discovery(pvalues, alpha=0.05):
     """Benjamini-Hochberg procedure for controlling false discovery rate
@@ -98,20 +94,6 @@ def fisher_exact(table, side="two.sided", zero_correction=True):
         ]
 
     return odds_ratio, np.array(interval95), p_value
-
-
-def r_fisher(table, side="two.sided", zero_correction=True):
-    # Get 95% confidence interval from R function fisher.test
-    # Use a table with 1 added to zeros if zero_correction is on
-    # (this is just for the confidence interval)
-    ci_table = table.copy()
-    if zero_correction:
-        ci_table[ci_table == 0] += 1
-    v = robjects.IntVector(np.array(ci_table).flatten())
-    m = robjects.r['matrix'](v,nrow=2)
-    r_result = stats.fisher_test(m, alternative=side)
-
-    return r_result[2][0], np.array(r_result[1]), r_result[0][0]
 
 
 def jackknife(samples, estimator, parallel=False, **kwargs):
