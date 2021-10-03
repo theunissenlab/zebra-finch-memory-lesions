@@ -53,7 +53,7 @@ def load_lesion_size_data():
 
 
 def load_lesion_target_data():
-    return pd.read_csv(os.path.join(DATADIR, "behavior", "NCM_lesion_data.csv"))
+    return pd.read_csv(os.path.join(DATADIR, "behavior", "LesionTargetData.csv"))
 
 
 def load_spike_data():
