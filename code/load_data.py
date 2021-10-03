@@ -7,7 +7,7 @@ import pandas as pd
 import wavio
 
 
-if os.environ["DATADIR"]:
+if os.environ.get("DATADIR"):
     DATADIR = os.environ["DATADIR"]
 else:
     _CODEDIR, _ = os.path.split(__file__)
@@ -41,6 +41,19 @@ def load_lesion_data():
 
     lesion_data = lesion_data.drop(index=6).reindex()
     return lesion_data
+
+
+def load_lesion_size_data():
+    tables = {}
+    for csv_file in glob.glob(os.path.join(DATADIR, "behavior", "NCMLesionSizeData", "*.csv")):
+        subject = os.path.splitext(os.path.basename(csv_file))[0]
+        tables[subject] = pd.read_csv(csv_file)
+
+    return tables
+
+
+def load_lesion_target_data():
+    return pd.read_csv(os.path.join(DATADIR, "behavior", "NCM_lesion_data.csv"))
 
 
 def load_spike_data():
