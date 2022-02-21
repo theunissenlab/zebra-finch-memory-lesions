@@ -11,7 +11,7 @@ else:
     DATADIR = os.path.join(_CODEDIR, "..", "data")
 
 
-def load_trials():
+def load_trials(limit_rows=None):
     """Load pandas DataFrame from TrialData.csv"""
     return pd.read_csv(
         os.path.join(DATADIR, "behavior", "TrialData.csv"),
@@ -19,7 +19,8 @@ def load_trials():
         converters={
             "Date": lambda d: pd.to_datetime(d).date(),
             "RT": pd.to_timedelta
-        }
+        },
+        nrows=limit_rows
     )
 
 

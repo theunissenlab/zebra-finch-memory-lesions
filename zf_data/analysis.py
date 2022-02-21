@@ -1,5 +1,10 @@
 import logging
-from functools import cache, cached_property
+try:
+    from functools import cache, cached_property
+except ImportError:
+    from cached_property import cached_property
+    from functools import lru_cache
+    cache = lru_cache(maxsize=None)
 
 import numpy as np
 import pandas as pd
