@@ -1,5 +1,6 @@
 from itertools import product
 
+from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -286,3 +287,18 @@ def set_oddsratio_yticks(ax, biggest, smallest=None, convert_log=True, set_label
     if convert_log:
         ax.hlines(1, *plt.xlim(), linestyle="--", zorder=-1)
         ax.set_ylim(np.power(2., smallest), np.power(2., biggest))
+
+
+def smoothhist(data, range=None, bins=None, ax=None, fill=False, **kwargs):
+    """A KDE smoothed histogram"""
+    if ax is None:
+        ax = plt.gca()
+
+    normal_edges = np.histogram_bin_edges(data, range=range, bins=bins)
+    bin_width = normal_edges[1] - normal_edges[0]
+    kde = KernelDensity(kernel='gaussian', bandwidth=bin_width).fit(data[:, None])
+    x = np.linspace(normal_edges[0], normal_edges[-1], 1000)
+    if fill:
+        ax.fill_between(x, 0, np.exp(kde.score_samples(x[:, np.newaxis])), **kwargs)
+    else:
+        ax.plot(x, np.exp(kde.score_samples(x[:, np.newaxis])), **kwargs)
