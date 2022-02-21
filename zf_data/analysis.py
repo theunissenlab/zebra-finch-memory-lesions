@@ -361,10 +361,7 @@ class Tsvk:
         return pd.DataFrame({
             "Subject": self.subjects,
             "logOR": [
-                (
-                    np.log2(self.nore.odds(subject, k)["Odds"])
-                    - np.log2(self.re.odds(subject, k)["Odds"])
-                )
+                np.log2(self.nore.odds(subject, k)) - np.log2(self.re.odds(subject, k))
                 for subject in self.subjects
             ]
         })
