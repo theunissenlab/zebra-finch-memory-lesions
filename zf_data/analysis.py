@@ -1,5 +1,10 @@
 import logging
-from functools import cache, cached_property
+try:
+    from functools import cache, cached_property
+except ImportError:
+    from cached_property import cached_property
+    from functools import lru_cache
+    cache = lru_cache(maxsize=None)
 
 import numpy as np
 import pandas as pd
@@ -97,7 +102,7 @@ class Tsvk:
         self.df = count_relative_informative_trials(df)
         self.k_max = min(k_max, np.max(self.df["RelInformativeTrialsSeen"]))
         if k_max != self.k_max:
-            logger.warn("Provided trials do not reach k_max={} informative trials; using {} instead".format(
+            logger.debug("Provided trials do not reach k_max={} informative trials; using {} instead".format(
                 k_max,
                 self.k_max
             ))
@@ -157,7 +162,7 @@ class Tsvk:
             ]
             last_k = np.max(selected_trials["RelInformativeTrialsSeen"])
             X = np.sum(selected_trials["RelInformativeTrialsSeen"] == last_k)
-            logger.warn(f"Encountered no trials for subject={subject} | vocalizer={vocalizer} | k={k}; setting t_svk to {2*X}")
+            logger.debug(f"Encountered no trials for subject={subject} | vocalizer={vocalizer} | k={k}; setting t_svk to {2*X}")
             return 2 * X
 
         return len(selected_trials)
@@ -284,9 +289,9 @@ class Tsvk:
 
             if not len(other_probs):
                 # Return 1 / (2 * len(subjects x vocalizers))
-                logger.warn("Encountered case where p=0 for all vocalizers")
                 n_subjects_by_vocalizers = np.sum([len(v) for v in self.subject_to_vocalizers.values()])
                 p = 1.0 / (2.0 * n_subjects_by_vocalizers)
+                logger.debug(f"Encountered case where p=0 for all vocalizers, setting p={p}")
             else:
                 p = 0.5 * np.mean(other_probs)
 
