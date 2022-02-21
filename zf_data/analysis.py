@@ -103,10 +103,7 @@ class Tsvk:
         self.df = count_relative_informative_trials(df)
         self.k_max = min(k_max, np.max(self.df["RelInformativeTrialsSeen"]))
         if k_max != self.k_max:
-            logger.debug("Provided trials do not reach k_max={} informative trials; using {} instead".format(
-                k_max,
-                self.k_max
-            ))
+            logger.debug(f"Provided trials do not reach k_max={k_max} informative trials; using {self.k_max} instead")
         # self.df = self.df[self.df["RelInformativeTrialsSeen"] <= self.k_max]
 
         self.subjects = self.df.Subject.unique()
@@ -117,6 +114,9 @@ class Tsvk:
             (subject, self.df[self.df["Subject"] == subject]["StimulusVocalizerId"].unique())
             for subject in self.subjects
         )
+
+        if not len(self.df):
+            raise ValueError("Dataframe passed to Tsvk is empty")
 
         # Check if dataframe has any rewarded or nonrewarded
         self._includes_both_reward_classes = set(["Rewarded", "Nonrewarded"]) == set(self.df["StimulusClass"].unique())
@@ -148,7 +148,7 @@ class Tsvk:
             Number of trials between the kth (exclusive) and the (k+1)th (inclusive)
             informative trial of vocalizer by subject
         """
-        if isinstance(k, int):
+        if isinstance(k, np.integer):
             selected_trials = self.df[
                 (self.df["Subject"] == subject) &
                 (self.df["StimulusVocalizerId"] == vocalizer) &
@@ -172,6 +172,7 @@ class Tsvk:
             last_k = np.max(selected_trials["RelInformativeTrialsSeen"])
             X = np.sum(selected_trials["RelInformativeTrialsSeen"] == last_k)
             logger.debug(f"Encountered no trials for subject={subject} | vocalizer={vocalizer} | k={k}; setting t_svk to {2*X}")
+            return np.nan
             return 2 * X
 
         return len(selected_trials)
@@ -207,7 +208,7 @@ class Tsvk:
             The probability between 0 and 1 that the subject interrupts a vocalizer
             in the selected set of trials after having seen k informative trials.
         """
-        return np.mean([
+        return np.nanmean([
             self._p_int(subject, v, k)
             for v in self.subject_to_vocalizers[subject]
         ])
@@ -260,8 +261,15 @@ class Tsvk:
         """
         means = []
         sems = []
-        for k_ in self.k:
-            mean, sem = jackknife(self.p_by_subjects(k_)["P_int"], np.mean)
+        for k in self.k:
+            p = self.p_by_subjects(k)["P_int"]
+            if np.any(np.isnan(p)):
+                logger.warn(f"Found a NaN element in estimate of p_by_k at k={k}")
+
+            mean, sem = jackknife(
+                p[~np.isnan(p)],
+                np.mean
+            )
             means.append(mean)
             sems.append(sem)
         
@@ -290,10 +298,13 @@ class Tsvk:
             raise RuntimeError("odds() got value of p = 1, which should not be possible")
         
         if p == 0:
+            # This subject never interrupted any vocalizer at k informative trials.
+            # To avoid discontinuity in odds ratios, map p=0 to an estimate based on the
+            # average probability of interruption of all vocalizers.
             other_probs = [
                 self.p(subject, k)
                 for s2 in self.subjects
-                if (subject != s2) and (self.p(subject, k) != 0)
+                if (subject != s2) and (self.p(subject, k) != 0) and not np.isnan(self.p(subject, k))
             ]
 
             if not len(other_probs):
@@ -401,7 +412,10 @@ class Tsvk:
             log_odds_re = np.log2(self.re.odds_by_subjects(k)["Odds"])
 
             # Jack-knife the expectation in Equation 4 and estimated standard error
-            mean, sem = jackknife(log_odds_nore - log_odds_re, np.mean)
+            log_odds_ratio = log_odds_nore - log_odds_re
+            if np.any(np.isnan(log_odds_ratio)):
+                logger.warn(f"Found a NaN element in estimate of log odds ratio at k={k}")
+            mean, sem = jackknife(log_odds_ratio[~np.isnan(log_odds_ratio)], np.mean)
 
             # One-sided t-test
             tstat, pvalue = scipy.stats.ttest_rel(
