@@ -148,7 +148,7 @@ class Tsvk:
             Number of trials between the kth (exclusive) and the (k+1)th (inclusive)
             informative trial of vocalizer by subject
         """
-        if isinstance(k, np.integer):
+        if np.issubdtype(type(k), np.integer):
             selected_trials = self.df[
                 (self.df["Subject"] == subject) &
                 (self.df["StimulusVocalizerId"] == vocalizer) &
