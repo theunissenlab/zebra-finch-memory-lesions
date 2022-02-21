@@ -1,8 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
-import multiprocessing
 import numpy as np
-from multiprocessing import Pool
 from scipy.stats import hypergeom
 from scipy.optimize import curve_fit
 
@@ -111,11 +110,13 @@ def jackknife(samples, estimator, parallel=False, **kwargs):
     jk_all = estimator(np.array(samples), **kwargs)
 
     # Compute value of estimator for each combination of n-1 samples
-    map_data = [np.concatenate([samples[:i], samples[i+1:]]) for i in range(len(samples))]
+    map_data = [
+        np.concatenate([samples[:i], samples[i+1:]])
+        for i in range(len(samples))
+    ]
     if parallel:
-        cores = multiprocessing.cpu_count()
-        with Pool(cores - 1) as p:
-            jk_n = p.map(partial(estimator, **kwargs), map_data)
+        with ThreadPoolExecutor(4) as pool:
+            jk_n = list(pool.map(partial(estimator, **kwargs), map_data))
     else:
         jk_n = [partial(estimator, **kwargs)(s) for s in map_data]
     jk_n = np.array(jk_n)

@@ -286,21 +286,3 @@ def set_oddsratio_yticks(ax, biggest, smallest=None, convert_log=True, set_label
     if convert_log:
         ax.hlines(1, *plt.xlim(), linestyle="--", zorder=-1)
         ax.set_ylim(np.power(2., smallest), np.power(2., biggest))
-
-def plot_raster(spike_times, yrange=None, ax=None, **marker_kwargs):
-    if ax is None:
-        ax = plt.gca()
-
-    if yrange is None:
-        y_step = 1
-        y0 = 0
-    else:
-        y_step = (yrange[1] - yrange[0]) * (1 / len(spike_times))
-        y0 = yrange[0]
-
-    for i, spikes in enumerate(spike_times):
-        y = y0 + i * y_step
-        # ax.scatter(spikes, y * np.ones(len(spikes)), **marker_kwargs)
-        ax.vlines(spikes, y, y + y_step, **marker_kwargs)
-
-    return ax
