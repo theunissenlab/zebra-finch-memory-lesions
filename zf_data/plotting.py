@@ -289,7 +289,7 @@ def set_oddsratio_yticks(ax, biggest, smallest=None, convert_log=True, set_label
         ax.set_ylim(np.power(2., smallest), np.power(2., biggest))
 
 
-def smoothhist(data, range=None, bins=None, ax=None, fill=False, **kwargs):
+def smoothhist(data, range=None, bins=None, ax=None, orientation="vertical", fill=False, **kwargs):
     """A KDE smoothed histogram"""
     if ax is None:
         ax = plt.gca()
@@ -298,7 +298,15 @@ def smoothhist(data, range=None, bins=None, ax=None, fill=False, **kwargs):
     bin_width = normal_edges[1] - normal_edges[0]
     kde = KernelDensity(kernel='gaussian', bandwidth=bin_width).fit(data[:, None])
     x = np.linspace(normal_edges[0], normal_edges[-1], 1000)
-    if fill:
-        ax.fill_between(x, 0, np.exp(kde.score_samples(x[:, np.newaxis])), **kwargs)
+    if orientation == "vertical":
+        if fill:
+            ax.fill_between(x, 0, np.exp(kde.score_samples(x[:, np.newaxis])), **kwargs)
+        else:
+            ax.plot(x, np.exp(kde.score_samples(x[:, np.newaxis])), **kwargs)
+    elif orientation == "horizontal":
+        if fill:
+            ax.fill_betweenx(x, 0, np.exp(kde.score_samples(x[:, np.newaxis])), **kwargs)
+        else:
+            ax.plot(np.exp(kde.score_samples(x[:, np.newaxis])), x, **kwargs)
     else:
-        ax.plot(x, np.exp(kde.score_samples(x[:, np.newaxis])), **kwargs)
+        raise ValueError(f"Invalid orientation '{orientation}''; must be 'horizontal' or 'vertical'")
