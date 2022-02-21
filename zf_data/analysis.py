@@ -1,4 +1,5 @@
 import logging
+from typing import Iterable, Union
 try:
     from functools import cache, cached_property
 except ImportError:
@@ -120,7 +121,7 @@ class Tsvk:
         # Check if dataframe has any rewarded or nonrewarded
         self._includes_both_reward_classes = set(["Rewarded", "Nonrewarded"]) == set(self.df["StimulusClass"].unique())
 
-    def filter(self, condition: 'Iterable') -> 'Tsvk':
+    def filter(self, condition: Iterable) -> 'Tsvk':
         return Tsvk(self.df[condition], k_max=self.k_max)
 
     @cached_property
@@ -136,7 +137,7 @@ class Tsvk:
         return self.filter(self.df["StimulusClass"] == "Nonrewarded")
 
     @cache
-    def _t_svk(self, subject: str, vocalizer: str, k: int):
+    def _t_svk(self, subject: str, vocalizer: str, k: Union[int, Iterable[int]]):
         """The number of informative trials in the kth bin for subject and vocalizer
 
         Definition of $$T^{sv}_{k}$$ in the paper.
@@ -147,11 +148,19 @@ class Tsvk:
             Number of trials between the kth (exclusive) and the (k+1)th (inclusive)
             informative trial of vocalizer by subject
         """
-        selected_trials = self.df[
-            (self.df["Subject"] == subject) &
-            (self.df["StimulusVocalizerId"] == vocalizer) &
-            (self.df["RelInformativeTrialsSeen"] == k)
-        ]
+        if isinstance(k, int):
+            selected_trials = self.df[
+                (self.df["Subject"] == subject) &
+                (self.df["StimulusVocalizerId"] == vocalizer) &
+                (self.df["RelInformativeTrialsSeen"] == k)
+            ]
+        else:
+            selected_trials = self.df[
+                (self.df["Subject"] == subject) &
+                (self.df["StimulusVocalizerId"] == vocalizer) &
+                self.df["RelInformativeTrialsSeen"].isin(k)
+            ]
+
         if not len(selected_trials):
             # Estimate probabilty of interruption
             # let X = number of interruptions since the last informative trial
@@ -168,7 +177,7 @@ class Tsvk:
         return len(selected_trials)
 
     @cache
-    def _p_int(self, subject: str, vocalizer: str, k: int):
+    def _p_int(self, subject: str, vocalizer: str, k: Union[int, Iterable[int]]):
         """Emperical probability of interruption
 
         Implementation of (Equation 2)
@@ -186,7 +195,7 @@ class Tsvk:
         return (t - 1) / t
 
     @cache
-    def p(self, subject: str, k: int):
+    def p(self, subject: str, k: Union[int, Iterable[int]]):
         """Probability of interruption averaged over vocalizers, for given subject
 
         Implementation of (Equation 3) when dataframe in Tsvk object is limited
@@ -204,7 +213,7 @@ class Tsvk:
         ])
 
     @cache
-    def p_by_subjects(self, k: int) -> pd.DataFrame:
+    def p_by_subjects(self, k: Union[int, Iterable[int]]) -> pd.DataFrame:
         """Probability of interruption averaged over vocalizers, for each subject
 
         This is the left hand side of of (Equation 3) for a fixed k, for each subject
@@ -263,7 +272,7 @@ class Tsvk:
         })
 
     @cache
-    def odds(self, subject: str, k: int) -> float:
+    def odds(self, subject: str, k: Union[int, Iterable[int]]) -> float:
         """Odds of interruption averaged over vocalizers, for given subject
 
         Application of definition of odds (i.e. Odds = p / (1-p)) to interruption
@@ -298,7 +307,7 @@ class Tsvk:
         return p / (1.0 - p)
 
     @cache
-    def odds_by_subjects(self, k: int) -> pd.DataFrame:
+    def odds_by_subjects(self, k: Union[int, Iterable[int]]) -> pd.DataFrame:
         """Odds of interruption averaged over vocalizers, for each subject
 
         This is the definition of odds = p / (1 - p) applied to the
@@ -323,7 +332,7 @@ class Tsvk:
         })
 
     @cache
-    def logOR_by_subjects(self, k: int) -> pd.DataFrame:
+    def logOR_by_subjects(self, k: Union[int, Iterable[int]]) -> pd.DataFrame:
         """Compute the logOR by subject
 
         This implements (Equation 4) for a given k
