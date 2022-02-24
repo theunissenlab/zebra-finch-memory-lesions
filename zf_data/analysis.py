@@ -377,7 +377,7 @@ class Tsvk:
             ]
         })
             
-    def logOR(self):
+    def logOR(self, mode="fisher-exact"):
         """Computes the logOR over all informative trials with stats
 
         This is used to construct the informative trial curves in the logOR space in Figure 3A
@@ -402,35 +402,48 @@ class Tsvk:
             dof : int
                 The degrees of freedom (n_subjects - 1) of the one-sided t-test
         """
+        if mode not in ("fisher-exact", "average"):
+            raise ValueError
+
         means = []
         sems = []
         pvalues = []
         tstats = []
 
-        for k in self.k:
-            log_odds_nore = np.log2(self.nore.odds_by_subjects(k)["Odds"])
-            log_odds_re = np.log2(self.re.odds_by_subjects(k)["Odds"])
+        if mode == "fisher-exact":
+            for k in self.k:
+                odds_ratio, ci, _ = self.fisher_exact(k=k, side="two-sided")
+                _, _, pvalue = self.fisher_exact(k=k, side="greater")
 
-            # Jack-knife the expectation in Equation 4 and estimated standard error
-            log_odds_ratio = log_odds_nore - log_odds_re
-            if np.any(np.isnan(log_odds_ratio)):
-                logger.warn(f"Found a NaN element in estimate of log odds ratio at k={k}")
-            mean, sem = jackknife(log_odds_ratio[~np.isnan(log_odds_ratio)], np.mean)
+                means.append(odds_ratio)
+                sems.append(np.mean(np.abs(ci - odds_ratio)) / 2)
+                pvalues.append(pvalue)
+                tstats.append(None)
+        else:
+            for k in self.k:
+                log_odds_nore = np.log2(self.nore.odds_by_subjects(k)["Odds"])
+                log_odds_re = np.log2(self.re.odds_by_subjects(k)["Odds"])
 
-            # One-sided t-test
-            tstat, pvalue = scipy.stats.ttest_rel(
-                log_odds_nore,
-                log_odds_re
-            )
-            dof = len(self.subjects) - 1
+                # Jack-knife the expectation in Equation 4 and estimated standard error
+                log_odds_ratio = log_odds_nore - log_odds_re
+                if np.any(np.isnan(log_odds_ratio)):
+                    logger.warn(f"Found a NaN element in estimate of log odds ratio at k={k}")
+                mean, sem = jackknife(log_odds_ratio[~np.isnan(log_odds_ratio)], np.mean)
 
-            # One-sided t-test p value conversion
-            pvalue = pvalue / 2 if tstat > 0 else (1 - (pvalue / 2))
+                # One-sided t-test
+                tstat, pvalue = scipy.stats.ttest_rel(
+                    log_odds_nore,
+                    log_odds_re
+                )
+                dof = len(self.subjects) - 1
 
-            means.append(mean)
-            sems.append(sem)
-            pvalues.append(pvalue)
-            tstats.append(tstat)
+                # One-sided t-test p value conversion
+                pvalue = pvalue / 2 if tstat > 0 else (1 - (pvalue / 2))
+
+                means.append(mean)
+                sems.append(sem)
+                pvalues.append(pvalue)
+                tstats.append(tstat)
 
         return pd.DataFrame({
             "k": self.k,
@@ -474,13 +487,14 @@ class Tsvk:
 
         table = np.array([
             [
-                np.sum(re_df["Interrupt"] == True),
-                np.sum(re_df["Interrput"] == False),
+                np.sum(nore_df["Interrupt"] == True),
+                np.sum(nore_df["Interrupt"] == False),
             ],
             [
-                np.sum(nore_df["Interrupt"] == True),
-                np.sum(nore_df["Interrput"] == False),
+                np.sum(re_df["Interrupt"] == True),
+                np.sum(re_df["Interrupt"] == False),
             ]
         ])
 
         odds_ratio, ci_95, p_value = fisher_exact(table)
+        return odds_ratio, ci_95, p_value
