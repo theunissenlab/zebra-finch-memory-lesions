@@ -101,7 +101,11 @@ class Tsvk:
     """
     def __init__(self, df: pd.DataFrame, k_max: int = None):
         self.df = count_relative_informative_trials(df)
-        self.k_max = min(k_max, np.max(self.df["RelInformativeTrialsSeen"]))
+        if k_max is None:
+            self.k_max = np.max(self.df["RelInformativeTrialsSeen"])
+        else:
+            self.k_max = min(k_max, np.max(self.df["RelInformativeTrialsSeen"]))
+
         if k_max != self.k_max:
             logger.debug(f"Provided trials do not reach k_max={k_max} informative trials; using {self.k_max} instead")
         # self.df = self.df[self.df["RelInformativeTrialsSeen"] <= self.k_max]
@@ -377,7 +381,7 @@ class Tsvk:
             ]
         })
             
-    def logOR(self, mode="fisher-exact"):
+    def logOR(self, mode="average"):
         """Computes the logOR over all informative trials with stats
 
         This is used to construct the informative trial curves in the logOR space in Figure 3A
@@ -411,9 +415,31 @@ class Tsvk:
         tstats = []
 
         if mode == "fisher-exact":
+            # This mode computes p(int) by using the fisher exact test on each
+            # subject for each informative trial bin. This measure is biased when
+            # interruption rates are low, becauase each vocalizers are under-represented
+            # in the contingency matrix when their interruption rates are low (few
+            # trials within each informative trial bin)
+            #
+            # Example:
+            # v1: 4 interrupts, 1 non-interrupt, p(int|v1) = 0.8
+            # v2: 0 interrupts, 1 non-interrupt, p(int|v2) = 0.0
+            # v3: 0 interrupts, 1 non-interrupt, p(int|v3) = 0.0
+            #
+            # If we assume a uniform prior over vocalizers, then p(v_i) = 1/3
+            # and p(int) = p(int|v)p(v) = (1/3) * (0.8) = 27%
+            #
+            # However, if we build a contingency matrix, the matrix will see this
+            # probability as
+            # p(int) = (4 interrupts) / (7 trials) = 57%
+            #
+            # This effect is most severe for low interrupting subjects, where there are
+            # often 0 or 1 interruptions in a bin. So we prefer the "average" method
+            # of computing logOR in an informative trial bin.
+
             for k in self.k:
                 odds_ratios = np.array([
-                    self.fisher_exact(subject, k=k, side="greater")
+                    self.fisher_exact(subject, k=k, side="greater")[0]
                     for subject in self.subjects
                 ])
                 log_odds_ratio = np.log2(odds_ratios)
@@ -425,7 +451,7 @@ class Tsvk:
                 # One-sided t-test
                 tstat, pvalue = scipy.stats.ttest_1samp(
                     log_odds_ratio[~np.isnan(log_odds_ratio)],
-                    None
+                    0
                 )
                 dof = len(self.subjects) - 1
 
