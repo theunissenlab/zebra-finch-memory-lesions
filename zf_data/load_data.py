@@ -1,3 +1,4 @@
+import glob
 import os
 
 import numpy as np
@@ -24,4 +25,17 @@ def load_trials(limit_rows=None):
     )
 
 
+def load_lesion_summary_table():
+    """Load pandas DataFrame from TrialData.csv"""
+    return pd.read_csv(
+        os.path.join(DATADIR, "behavior", "LesionQuantificationSummary.csv"),
+    )
 
+
+def load_subject_lesion_tables():
+    tables = {}
+    for csv_file in glob.glob(os.path.join(DATADIR, "behavior", "LesionQuantification", "*.csv")):
+        subject = os.path.splitext(os.path.basename(csv_file))[0]
+        tables[subject] = pd.read_csv(csv_file)
+
+    return tables
