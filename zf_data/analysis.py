@@ -412,13 +412,31 @@ class Tsvk:
 
         if mode == "fisher-exact":
             for k in self.k:
-                odds_ratio, ci, _ = self.fisher_exact(k=k, side="two-sided")
-                _, _, pvalue = self.fisher_exact(k=k, side="greater")
+                odds_ratios = np.array([
+                    self.fisher_exact(subject, k=k, side="greater")
+                    for subject in self.subjects
+                ])
+                log_odds_ratio = np.log2(odds_ratios)
 
-                means.append(odds_ratio)
-                sems.append(np.mean(np.abs(ci - odds_ratio)) / 2)
+                if np.any(np.isnan(log_odds_ratio)):
+                    logger.warn(f"Found a NaN element in estimate of log odds ratio at k={k}")
+                mean, sem = jackknife(log_odds_ratio[~np.isnan(log_odds_ratio)], np.mean)
+
+                # One-sided t-test
+                tstat, pvalue = scipy.stats.ttest_1samp(
+                    log_odds_ratio[~np.isnan(log_odds_ratio)],
+                    None
+                )
+                dof = len(self.subjects) - 1
+
+                # One-sided t-test p value conversion
+                pvalue = pvalue / 2 if tstat > 0 else (1 - (pvalue / 2))
+
+                means.append(mean)
+                sems.append(sem)
                 pvalues.append(pvalue)
-                tstats.append(None)
+                tstats.append(tstat)
+                dof = None
         else:
             for k in self.k:
                 log_odds_nore = np.log2(self.nore.odds_by_subjects(k)["Odds"])
@@ -454,7 +472,23 @@ class Tsvk:
             "dof": dof
         })
 
-    def fisher_exact(self, k=None, side="two.sided"):
+    def fisher_exact_by_subjects(self, k: int = None, side: str = "two.sided"):
+        """Perform a fisher exact test for each subject
+        """
+        rows = []
+        for subject in self.subjects:
+            odds_ratio, ci, pvalue = self.fisher_exact(subject, k=k, side=side)
+            rows.append({
+                "Subject": subject,
+                "logOR": np.log2(odds_ratio),
+                "95CI_low": np.log2(ci[0]),
+                "95CI_high": np.log2(ci[1]),
+                "pvalue": pvalue,
+            })
+        return pd.DataFrame(rows)
+
+    @cache
+    def fisher_exact(self, subject: str, k: int = None, side: str = "two.sided"):
         """Perform a the fisher exact test on rewarded and non-rewarded vocalizers
 
         If k is specified, perform it for only that informative trial bin, which
@@ -484,6 +518,9 @@ class Tsvk:
             else:
                 re_df = self.re.df[self.re.df["RelInformativeTrialsSeen"].isin(k)]
                 nore_df = self.nore.df[self.nore.df["RelInformativeTrialsSeen"].isin(k)]
+
+        re_df = re_df[re_df["Subject"] == subject]
+        nore_df = nore_df[nore_df["Subject"] == subject]
 
         table = np.array([
             [
