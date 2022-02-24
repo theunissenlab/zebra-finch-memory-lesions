@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 
-from .stats import jackknife
+from .stats import jackknife, fisher_exact
 
 
 logger = logging.getLogger(__name__)
@@ -441,3 +441,46 @@ class Tsvk:
             "dof": dof
         })
 
+    def fisher_exact(self, k=None, side="two.sided"):
+        """Perform a the fisher exact test on rewarded and non-rewarded vocalizers
+
+        If k is specified, perform it for only that informative trial bin, which
+        includes all trials with k informative trials seen.
+
+        Otherwise, perform it on the entire dataset.
+
+        Returns
+        -------
+        odds_ratio : float
+            Estimate of the odds ratio
+        ci_95 : tuple[float, float]
+            95% confidence interval bounds
+        p_value : float
+            P value for significance testing
+        """
+        if side not in ("greater", "less", "two.sided"):
+            raise ValueError("side parameter must be one of 'greater', 'less', or 'two.sided'")
+        # If k is None
+        if k is None:
+            re_df = self.re.df
+            nore_df = self.nore.df
+        else:
+            if np.issubdtype(type(k), np.integer):
+                re_df = self.re.df[self.re.df["RelInformativeTrialsSeen"] == k]
+                nore_df = self.nore.df[self.nore.df["RelInformativeTrialsSeen"] == k]
+            else:
+                re_df = self.re.df[self.re.df["RelInformativeTrialsSeen"].isin(k)]
+                nore_df = self.nore.df[self.nore.df["RelInformativeTrialsSeen"].isin(k)]
+
+        table = np.array([
+            [
+                np.sum(re_df["Interrupt"] == True),
+                np.sum(re_df["Interrput"] == False),
+            ],
+            [
+                np.sum(nore_df["Interrupt"] == True),
+                np.sum(nore_df["Interrput"] == False),
+            ]
+        ])
+
+        odds_ratio, ci_95, p_value = fisher_exact(table)
