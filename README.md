@@ -1,4 +1,4 @@
-# Zebra Finch Auditory Memory: Behavior, Lesions, and Ephys
+# Zebra Finch Auditory Memory: Behavior and Lesions
 
 ## Data
 
