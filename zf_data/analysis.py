@@ -151,6 +151,10 @@ class Tsvk:
         T_svk : int
             Number of trials between the kth (exclusive) and the (k+1)th (inclusive)
             informative trial of vocalizer by subject
+        n_bins : int
+            Number of valid values for k (e.g. if a subject only had 3 informative trials
+            and the last k bin is 3, then there were n_bins=4, even if k=range(0, 10)
+            was passed into this function.)
         """
         if np.issubdtype(type(k), np.integer):
             selected_trials = self.df[
@@ -165,27 +169,40 @@ class Tsvk:
                 self.df["RelInformativeTrialsSeen"].isin(k)
             ]
 
+        # Generally, we assume that the last bin ends with a non-interruption
+        # interrupts: X X X O X X X O X X O
+        # k bin:      0 0 0 0 1 1 1 1 2 2 2
+        #
+        # and so we estimate the probability of interruption in each bin as (T-1)/T,
+        # where T is the length of the bin (e.g. 3/4, 3/4, and 2/3). But if are beyond
+        # the last non-interrupted trial, the last bin is open ended...
+        # interrupts: X X X O X X X O X X O X X
+        # k bin:      0 0 0 0 1 1 1 1 2 2 2 3 3
+        #
+        # ...and it does not make sense to estimate the last probability in bin 3 as 2/2 since
+        # we reached the end of the data. Instead, we estimate it as ((2T+1)-1)/(2T+1), or 4/5
+        #
+        # This next condition handles this case by checking if the last trial in this
+        # was an interruption
         if not len(selected_trials):
-            # Estimate probabilty of interruption
-            # let X = number of interruptions since the last informative trial
-            # Return 2X (so that p = (X - 0.5) / X
-            selected_trials = self.df[
-                (self.df["Subject"] == subject) &
-                (self.df["StimulusVocalizerId"] == vocalizer)
-            ]
-            last_k = np.max(selected_trials["RelInformativeTrialsSeen"])
-            X = np.sum(selected_trials["RelInformativeTrialsSeen"] == last_k)
-            logger.debug(f"Encountered no trials for subject={subject} | vocalizer={vocalizer} | k={k}; setting t_svk to {2*X}")
-            return np.nan
-            return 2 * X
+            return np.nan, 0
 
-        return len(selected_trials)
+        last_trial = selected_trials.iloc[-1]
+        n_trials = len(selected_trials)
+
+        if last_trial["Interrupt"] == True:
+            n_trials += int(np.sum(selected_trials["RelInformativeTrialsSeen"] == last_trial["RelInformativeTrialsSeen"])) + 1
+
+        if np.issubdtype(type(k), np.integer):
+            n_bins = 1
+        else:
+            n_bins = len([_k for _k in k if _k <= last_trial["RelInformativeTrialsSeen"]])
+
+        return n_trials, n_bins
 
     @cache
     def _p_int(self, subject: str, vocalizer: str, k: Union[int, Iterable[int]]):
         """Emperical probability of interruption
-
-        Implementation of (Equation 2)
 
         This is the empirical probability that `subject` interrupts `vocalizer`
         after having seen `k` informative trials of that vocalizer.
@@ -196,8 +213,12 @@ class Tsvk:
             The probability between 0 and 1 that the subject interrupts vocalizer
             after having seen k informative trials of that vocalizer
         """
-        t = self._t_svk(subject, vocalizer, k)
-        return (t - 1) / t
+        t, n_bins = self._t_svk(subject, vocalizer, k)
+
+        if n_bins == 0:
+            return np.nan
+
+        return (t - n_bins) / t
 
     @cache
     def p(self, subject: str, k: Union[int, Iterable[int]]):

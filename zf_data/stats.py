@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 import numpy as np
-from scipy.stats import hypergeom
+from scipy.stats import hypergeom, chi2
 from scipy.optimize import curve_fit
 
 
@@ -226,3 +226,36 @@ def bootstrap(func, *args, iters=10000):
         bootstrap_estimates.append(func(*sampled_args))
 
     return np.std(bootstrap_estimates)
+
+
+def likelihood_ratio_test(base_model_result, alternate_model_result):
+    """Perform a likelihood ratio to compare nested models
+
+    Parameters
+    ----------
+    base_model_result : statsmodels.base.model.LikelihoodResultsWrapper
+        A results wrapper from statsmodels that is the result of fitting a statsmodels model.
+        For example, the result of `smf.mixedlm("y ~ x", ...).fit()`. It should have a
+        reference to the model and .llf, the log likelihood of the model
+    alternate_model_result : statsmodels.base.model.LikelihoodResultsWrapper
+        A results wrapper from statsmodels (see base_model). This should be the results of fitting
+        an alternate model that adds additional parameters to the base_model.
+
+    Returns
+    -------
+    p : float
+        The p-value (between 0 and 1), representing the probability that one should accept the
+        null hypothesis (that the models explain the data equally well).
+    x : float
+        The chi-squared value, equal to twice the difference between the log-likelihood of the
+        two models
+    dof : int
+        The degrees of freedom for the chi-squared distribution, equal to the difference in the
+        number of parameters between the base model and alternate model
+    """
+    assert alternate_model_result.model.k_params > base_model_result.model.k_params
+    dof = alternate_model_result.model.k_params - base_model_result.model.k_params
+    x = 2 * (alternate_model_result.llf - base_model_result.llf)
+    p = 1 - chi2.cdf(x, dof)
+
+    return p, x, dof
