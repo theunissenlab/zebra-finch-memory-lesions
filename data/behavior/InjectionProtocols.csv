@@ -1,11 +1,11 @@
-Protocol,Target,"Coordinates (l [mm], r [mm])",Depths [mm],Injection,,,
-HVC-IBO-1,HVC,"(2.2, 0.1), (2.2, -0.2)",0.4,"200 nl of 0.7% IBO (22x9.2nl puffs, 5s apart, 5"" before retracting)",,,
-HVC-IBO-2,HVC,"(2.2, 0.1), (2.2, -0.1), (2.4, 0.1)",0.5,"147 nl of 0.7% IBO (16x9.2nl puffs, 5s apart, 5"" before retracting)",,,
-NCM-NMA-1,NCM,"(0.4, 0.8)",2.25,"230 nl of 2% NMA (10x23nl puffs, 1"" apart, 5"" before retracting)",,,
-,,"(0.4, 0.3)","1.5, 2.0","230 nl of 2% NMA (10x23nl puffs, 1"" apart, 5"" before retracting)",,,
-NCM-NMA-2,NCM,"(0.5, 0.8)",2.0,"230 nl of 2% NMA (50x4.6nl puffs, 10s apart, 5"" before retracting)",,,
-,,"(0.5, 0.4)","1.5, 2.0","230 nl of 2% NMA (50x4.6nl puffs, 10s apart, 5"" before retracting)",,,
-NCM-NMA-3,NCM,"(0.7, 0.8)",1.8,"300 nl of 2% NMA (65x4.6nl puffs, 10s apart, 5"" before retracting)",,,
-,,"(0.5, 0.5)","1.5, 2.0","300 nl of 2% NMA (65x4.6nl puffs, 10s apart, 5"" before retracting)",,,
-NCM-IBO-1,NCM,"(1.0, 0.5)",1.8,"200 nl of 0.7% IBO (22x9.2nl puffs, 5s apart, 5"" before retracting)",,,
-,,"(0.5, 0.5)","1.0, 1.5","147 nl of 0.7% IBO (16x9.2nl puffs, 5s apart, 5"" before retracting)",,,
+Protocol,Target,"Coordinates (l [mm], r [mm])",Depths [mm],Injection
+HVC-IBO-1,HVC,"(2.2, 0.1), (2.2, -0.2)",0.4,"200 nl of 0.7% IBO (22x9.2nl puffs, 5s apart, 5"" before retracting)"
+HVC-IBO-2,HVC,"(2.2, 0.1), (2.2, -0.1), (2.4, 0.1)",0.5,"147 nl of 0.7% IBO (16x9.2nl puffs, 5s apart, 5"" before retracting)"
+NCM-NMA-1,NCM,"(0.4, 0.8)",2.25,"230 nl of 2% NMA (10x23nl puffs, 1"" apart, 5"" before retracting)"
+,,"(0.4, 0.3)","1.5, 2.0","230 nl of 2% NMA (10x23nl puffs, 1"" apart, 5"" before retracting)"
+NCM-NMA-2,NCM,"(0.5, 0.8)",2.0,"230 nl of 2% NMA (50x4.6nl puffs, 10s apart, 5"" before retracting)"
+,,"(0.5, 0.4)","1.5, 2.0","230 nl of 2% NMA (50x4.6nl puffs, 10s apart, 5"" before retracting)"
+NCM-NMA-3,NCM,"(0.7, 0.8)",1.8,"300 nl of 2% NMA (65x4.6nl puffs, 10s apart, 5"" before retracting)"
+,,"(0.5, 0.5)","1.5, 2.0","300 nl of 2% NMA (65x4.6nl puffs, 10s apart, 5"" before retracting)"
+NCM-IBO-1,NCM,"(1.0, 0.5)",1.8,"200 nl of 0.7% IBO (22x9.2nl puffs, 5s apart, 5"" before retracting)"
+,,"(0.5, 0.5)","1.0, 1.5","147 nl of 0.7% IBO (16x9.2nl puffs, 5s apart, 5"" before retracting)"
