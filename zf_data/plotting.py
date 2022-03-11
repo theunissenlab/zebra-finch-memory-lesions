@@ -6,6 +6,9 @@ import pandas as pd
 import numpy as np
 
 
+AX_COLOR = "#666666"
+
+
 class color_by_reward(object):
     @staticmethod
     def get(x):
@@ -310,3 +313,115 @@ def smoothhist(data, range=None, bins=None, ax=None, orientation="vertical", fil
             ax.plot(np.exp(kde.score_samples(x[:, np.newaxis])), x, **kwargs)
     else:
         raise ValueError(f"Invalid orientation '{orientation}''; must be 'horizontal' or 'vertical'")
+
+
+def figure_cm(width: float, height: float, *args, dpi=300, **kwargs) -> plt.Figure:
+    """Make a matplotlib figure in **cm** for a given dpi
+    """
+    inches_per_cm = 0.393701
+    fig = plt.figure(*args, dpi=dpi, **kwargs)
+    print(f"Figure Dimensions {width:.2f}cm x {height:.2f}cm")
+    fig.set_size_inches(width * inches_per_cm, height * inches_per_cm)
+    return fig
+
+
+def draw_probability_axes_markers(ax: plt.Axes):
+    """Draws the axes elements common to all learning curves showing P_re and P_nore"""
+    ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8])
+    ax.set_ylim(0, 0.8)
+    ax.set_yticklabels([0, 0.2, 0.4, 0.6, 0.8], fontsize=6)
+    border(ax, 1, 0, 0, 1)
+
+
+# TODO: consolidate with set_oddsratio_yticks?
+def draw_logor_axes_markers(
+        biggest,
+        smallest: int = None,
+        convert_log: bool = True,
+        ax: plt.Axes = None
+        ):
+    """Determine and set the yticks of an axis given the data range
+
+    Generates a pleasant set of ytick labels and spacing for a given
+    range of odds ratios.
+
+    Typecasts the y values into multiples (e.g. x1, x2, x4, etc) when the
+    odds ratio is > 1 or as fractions when the odds ratio is less than 1
+    (e.g. x1/2, x1/4, etc).
+
+    It ensures that:
+    * only powers of 2 are shown
+    * y=1 is always labeled
+    * there is a maximum of 5 y-values labeld
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    if smallest is None:
+        smallest = -biggest
+
+    if smallest >= -1:
+        smallest = -1
+
+    if convert_log:
+        ax.set_yscale("log")
+
+    abs_biggest = max(np.abs(smallest), np.abs(biggest))
+
+    powers = np.arange(0, abs_biggest + 1)
+    n = len(powers)
+    powers = powers[::n // 6 + 1]
+    vals = np.concatenate([-powers, powers[1:]])
+    vals = vals[(vals >= smallest) & (vals <= biggest)]
+
+    if convert_log:
+        ticks = np.power(2., vals)
+    else:
+        ticks = vals
+
+    labels = [r"x{:d}".format(int(2 ** v)) if v >= 0 else r"x1/{:d}".format(int(2 ** -v)) for v in vals]
+
+    ax.set_yticks(ticks)
+    ax.set_yticklabels(labels, fontsize=6)
+    
+    if convert_log:
+        # Draw a line at unity (1)
+        ax.hlines(1, *ax.get_xlim(), linestyle="--", color=AX_COLOR, zorder=-1)
+        ax.set_ylim(np.power(2., smallest), np.power(2., biggest))
+    else:
+        ax.hlines(0, *ax.get_xlim(), linestyle="--", color=AX_COLOR, linewidth=0.5, zorder=-1)
+
+    border(ax, 1, 0, 0, 1)
+
+def draw_k_axis(k_max: int, labels: bool = True, ax: plt.Axes = None):
+    if ax is None:
+        ax = plt.gca()
+
+    xticks = np.arange(0, k_max, 5).astype(int)
+    xticklabels = xticks.copy().astype(str)
+    xticklabels[1:-1] = ""
+    ax.set_xlim(0, k_max - 1)
+    ax.set_xticks(xticks)
+    if labels:
+        ax.set_xticklabels(xticklabels, fontsize=6)
+
+
+def shaded_line(x, y, err, line_kwargs: dict = None, fill_kwargs: dict = None, ax: plt.Axes = None):
+    """Plot a line with a shaded error bounds.
+    
+    Defaults to alpha=0.2 for shading
+    """
+    if ax is None:
+        ax = plt.gca()
+    
+    fill_kwargs = fill_kwargs or {}
+    line_kwargs = line_kwargs or {}
+    
+    # line_kwargs.setdefault("linewidth", 1)
+    fill_kwargs.setdefault("alpha", 0.2)
+    fill_kwargs.setdefault("zorder", -1)
+    fill_kwargs.setdefault("facecolor", line_kwargs.get("color"))
+
+    ax.fill_between(x, y - err, y + err, **fill_kwargs)
+    ax.plot(x, y, **line_kwargs)
+
