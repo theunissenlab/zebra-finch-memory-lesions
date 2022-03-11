@@ -15,8 +15,8 @@ an asterisk indicates file that hasn't been added yet
 |Vocalizers.csv* | A table of vocalizer name and sex |
 |Stimuli.csv* | Stimulus file metadata for the stimuli contained in stimuli.tar.gz |
 |stimuli.tar.gz* | A folder `stimuli/` containing all the stimulus WAV files, referenced by Stimuli.csv |
-|InjectionProtocols.csv* | Describes the various injection protocols used, including lesioning agents, amounts, and coordinates |
-|SubjectInjections.csv* | Describes which subjects underwent which injection protcols in InjectionProtocols.csv |
+|InjectionProtocols.csv | Describes the various injection protocols used, including lesioning agents, amounts, and coordinates |
+|SubjectInjections.csv | Describes which subjects underwent which injection protcols in InjectionProtocols.csv |
 |LesionQuantificationSummary.csv | Table with lesion volume in four quadrants in each hemisphere for NCM lesioned subjects |
 |LesionQuantification/SUBJECT_NAME.csv | A separate table with the human-annotated lesion size data in saggital slices |
 |subject_songs.tar.gz* | A folder `subject_songs/` that contains recordings of some male subjects' songs before and after lesion |
