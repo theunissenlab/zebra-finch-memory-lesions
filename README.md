@@ -4,6 +4,19 @@
 
 Summary of behavioral data is located in [BehavioralDataSummary.md](BehavioralDataSummary.md).
 
+### Instructions
+
+The simplest way to run the code is to set up an isolated python environment for this project. The code requires Python 3.
+
+```shell
+$ git clone https://github.com/theunissenlab/zebra-finch-memory-lesions
+$ cd zebra-finch-memory-lesions
+$ python3 -m venv env
+$ source env/bin/activate
+(env) $ pip install -e .
+(env) $ jupyter lab
+```
+
 ### Data File Summary
 
 an asterisk indicates file that hasn't been added yet
