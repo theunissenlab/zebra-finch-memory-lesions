@@ -1,3 +1,4 @@
+import datetime
 import glob
 import os
 
@@ -12,9 +13,17 @@ else:
     DATADIR = os.path.join(_CODEDIR, "..", "data")
 
 
-def load_trials(limit_rows=None):
+EXCLUSION_SUBJECTS = [
+    "BluWhi3230M",
+    "GreWhi2703M",
+]
+EXCLUSION_DATE = datetime.date(2020, 11, 20)
+EXCLUSION_TIME = datetime.datetime(2020, 11, 20, 12, 0, 0)
+
+
+def load_trials(valid_only=True, limit_rows=None):
     """Load pandas DataFrame from TrialData.csv"""
-    return pd.read_csv(
+    df = pd.read_csv(
         os.path.join(DATADIR, "behavior", "TrialData.csv"),
         parse_dates=["Time"],
         converters={
@@ -23,6 +32,19 @@ def load_trials(limit_rows=None):
         },
         nrows=limit_rows
     )
+
+    if valid_only:
+        # Filter out data where audio output was not working
+        # (2 subjects on 2020-11-20 after 12pm)
+        return df[
+            ~(
+                df.Subject.isin(EXCLUSION_SUBJECTS) 
+                & (df.Date == EXCLUSION_DATE)
+                & (df.Time > EXCLUSION_TIME)
+            )
+        ]
+    else:
+        return df
 
 
 def load_lesion_summary_table():

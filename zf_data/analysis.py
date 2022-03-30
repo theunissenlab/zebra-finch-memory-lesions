@@ -472,12 +472,10 @@ class Tsvk:
                 # One-sided t-test
                 tstat, pvalue = scipy.stats.ttest_1samp(
                     log_odds_ratio[~np.isnan(log_odds_ratio)],
-                    0
+                    0,
+                    alternative="greater",
                 )
                 dof = len(self.subjects) - 1
-
-                # One-sided t-test p value conversion
-                pvalue = pvalue / 2 if tstat > 0 else (1 - (pvalue / 2))
 
                 means.append(mean)
                 sems.append(sem)
@@ -498,12 +496,10 @@ class Tsvk:
                 # One-sided t-test
                 tstat, pvalue = scipy.stats.ttest_rel(
                     log_odds_nore,
-                    log_odds_re
+                    log_odds_re,
+                    alternative="greater",
                 )
                 dof = len(self.subjects) - 1
-
-                # One-sided t-test p value conversion
-                pvalue = pvalue / 2 if tstat > 0 else (1 - (pvalue / 2))
 
                 means.append(mean)
                 sems.append(sem)

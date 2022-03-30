@@ -180,39 +180,6 @@ def compute_odds_ratio(
     return odds, interval, pvalue
 
 
-def linreg(x, y):
-    """Perform a simple linear regression on x, y arrays
-
-    Returns:
-        popt: optimal values of the parameters (a, b)
-        pcov: estimated covariance of the estimated values of popt
-        fit_fn: best fit line function, with parameters popt already filled in
-        r_squared: R squared value
-        r_adj: adjusted R squared value
-        sigma_ab: standard deviation of best fit values in popt (squart root of diagonal of cov)
-    """
-    def lin(x, a, b):
-        return x * a + b
-
-    popt, pcov = curve_fit(lin, x, y)
-    sigma_ab = np.sqrt(np.diagonal(pcov))
-    residuals = y - lin(x, *popt)
-
-    ss_res = np.sum(residuals**2)
-    ss_tot = np.sum((y - np.mean(y)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    n = len(x)
-    k = 1
-    r_adj = 1 - ((1 - r_squared) * (n-1) / (n-k-1))
-
-    def fit_fn(x):
-        return lin(x, *popt)
-
-    print(r_squared, r_adj, n, k)
-
-    return popt, pcov, fit_fn, r_squared, r_adj, sigma_ab
-
-
 def bootstrap(func, *args, iters=10000):
     """Return bootstrapped standard error for func with 1+ args
     """
@@ -259,3 +226,14 @@ def likelihood_ratio_test(base_model_result, alternate_model_result):
     p = 1 - chi2.cdf(x, dof)
 
     return p, x, dof
+
+
+def two_to_one_tail(p: float, t: float, mean: float = 0, side: str = "high"):
+    """Convert a p-value from a two tail to one tail test"""
+    if side not in ("high", "low"):
+        raise ValueError("side must be high or low")
+    
+    if (side == "high" and t > mean) or (side == "low" and t < mean):
+        return p / 2
+    else:
+        return 1 - (p / 2)
