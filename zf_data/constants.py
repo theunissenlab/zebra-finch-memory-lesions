@@ -19,11 +19,21 @@ K_MAX_INITIAL = 3 #@param {type: "integer"}
 COLORMAP = {
     "NCM": NCM_COLOR,
     "HVC": HVC_COLOR,
-    "CTRL": CTRL_COLOR
+    "CTRL": CTRL_COLOR,
+    "HVC+CTRL": HVC_COLOR
 }
+
+COLORFILL = {
+    "NCM": NCM_COLOR,
+    "HVC": HVC_COLOR,
+    "CTRL": CTRL_COLOR,
+    "HVC+CTRL": CTRL_COLOR
+}
+
 
 LINEMAP = {
     "NCM": NCM_LINESTYLE,
     "HVC": HVC_LINESTYLE,
     "CTRL": CTRL_LINESTYLE,
+    "HVC+CTRL": HVC_LINESTYLE
 }
