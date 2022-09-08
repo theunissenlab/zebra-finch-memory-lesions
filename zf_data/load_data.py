@@ -38,7 +38,7 @@ def load_trials(valid_only=True, limit_rows=None):
         # (2 subjects on 2020-11-20 after 12pm)
         return df[
             ~(
-                df.Subject.isin(EXCLUSION_SUBJECTS) 
+                df.Subject.isin(EXCLUSION_SUBJECTS)
                 & (df.Date == EXCLUSION_DATE)
                 & (df.Time > EXCLUSION_TIME)
             )
@@ -46,13 +46,24 @@ def load_trials(valid_only=True, limit_rows=None):
     else:
         return df
 
-
 def load_lesion_summary_table():
-    """Load pandas DataFrame from TrialData.csv"""
+    """Load pandas DataFrame for NCM lesion quantification"""
     return pd.read_csv(
         os.path.join(DATADIR, "behavior", "LesionQuantificationSummary.csv"),
     )
 
+def load_NCM_lesion_summary_table():
+    """Load pandas DataFrame for NCM lesion quantification"""
+    return pd.read_csv(
+        os.path.join(DATADIR, "behavior", "LesionQuantificationSummary.csv"),
+    )
+
+def load_ALL_lesion_summary_table():
+    """Load pandas DataFrame for total lesion volume quantification.  Use load_NCM_lesion_summary_table()
+       for NCM volume analysis."""
+    return pd.read_csv(
+        os.path.join(DATADIR, "behavior", "ALLLesionQuantificationSummary.csv"),
+    )
 
 def load_subject_lesion_tables():
     tables = {}
