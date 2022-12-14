@@ -1,0 +1,36 @@
+---
+title: "Lesion Data"
+output: html_notebook
+---
+
+
+
+```{r libraries}
+library(car)
+library(lme4)
+
+```
+
+```{r load data}
+
+dfInt = read.csv('/Users/frederictheunissen/Code/zebra-finch-memory-lesions/zf_data/dataInt')
+
+dfInt$LadderStage <- as.factor(dfInt$LadderStage)
+dfInt$StimulusCallType <- as.factor(dfInt$StimulusCallType)
+```
+
+Run the statistical tests
+
+```{r stats analyses}
+
+model.1 <- lmer(RTs ~ StimulusCallType + (1 | Subject), data = dfInt, subset = (dfInt$LadderStage == 'DCvsDC_6v6_d2') | (dfInt$LadderStage == 'SovsSo_8v8_d2') )
+summary(model.1)
+
+model.2 <- lmer(RTs ~ StimulusCallType + LesionStage + StimulusCallType:LesionStage + (LesionStage | Subject), data = dfInt, subset = (dfInt$LadderStage == 'DCvsDC_6v6_d2') | (dfInt$LadderStage == 'SovsSo_8v8_d2'))
+summary(model.2)
+
+
+# Test whether lesion had an effect on response time
+anova(model.1, model.2)
+
+```

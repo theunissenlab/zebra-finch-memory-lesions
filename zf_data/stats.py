@@ -92,7 +92,7 @@ def fisher_exact(table, side="two.sided", zero_correction=True):
                 np.exp(np.log(odds_ratio) + (1.96 * se))
         ]
 
-    return odds_ratio, np.array(interval95), p_value
+    return odds_ratio, np.array(interval95), p_value, se
 
 
 def jackknife(samples, estimator, parallel=False, **kwargs):

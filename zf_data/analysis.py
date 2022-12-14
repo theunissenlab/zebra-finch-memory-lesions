@@ -221,6 +221,25 @@ class Tsvk:
         return (t - n_bins) / t
 
     @cache
+    def _n_int(self, subject: str, vocalizer: str, k: Union[int, Iterable[int]]):
+        """Emperical probability of interruption
+
+        This is the empirical probability that `subject` interrupts `vocalizer`
+        after having seen `k` informative trials of that vocalizer.
+
+        Returns
+        -------
+        n_int, n_total : tuple of integers
+            The number of interruptions of that vocalizer after seing k interupted trials
+        """
+        t, n_bins = self._t_svk(subject, vocalizer, k)
+
+        if n_bins == 0:
+            return 0, 0
+
+        return t-n_bins, t
+
+    @cache
     def p(self, subject: str, k: Union[int, Iterable[int]]):
         """Probability of interruption averaged over vocalizers, for given subject
 
@@ -237,6 +256,29 @@ class Tsvk:
             self._p_int(subject, v, k)
             for v in self.subject_to_vocalizers[subject]
         ])
+
+    @cache
+    def n(self, subject: str, k: Union[int, Iterable[int]]):
+        """Probability of interruption averaged over vocalizers, for given subject
+
+        Implementation of (Equation 3) when dataframe in Tsvk object is limited
+        to either Rewarded or Nonrewarded trials
+        
+        Returns
+        -------
+        n : float
+            The probability between 0 and 1 that the subject interrupts a vocalizer
+            in the selected set of trials after having seen k informative trials.
+        """
+        nint = 0
+        ntot = 0
+        for v in self.subject_to_vocalizers[subject]:
+            n1, n2 = self._n_int(subject, v, k)
+            nint += n1
+            ntot += n2
+        
+        return nint, ntot
+
 
     @cache
     def p_by_subjects(self, k: Union[int, Iterable[int]]) -> pd.DataFrame:
@@ -306,7 +348,7 @@ class Tsvk:
 
     @cache
     def odds(self, subject: str, k: Union[int, Iterable[int]]) -> float:
-        """Odds of interruption averaged over vocalizers, for given subject
+        """Odds of interruption when p is averaged over vocalizers, for given subject
 
         Application of definition of odds (i.e. Odds = p / (1-p)) to interruption
         probabilities of (Equation 2)
@@ -399,10 +441,13 @@ class Tsvk:
             "logOR": [
                 np.log2(self.nore.odds(subject, k)) - np.log2(self.re.odds(subject, k))
                 for subject in self.subjects
-            ]
+            ],
+            "noreCounts": [self.nore.n(subject,k) for subject in self.subjects],
+            "reCounts": [self.re.n(subject, k) for subject in self.subjects]
         })
+ 
             
-    def logOR(self, mode="average"):
+    def logOR(self, mode='average-pvalue-vocalizer'):
         """Computes the logOR over all informative trials with stats
 
         This is used to construct the informative trial curves in the logOR space in Figure 3A
@@ -427,17 +472,21 @@ class Tsvk:
             dof : int
                 The degrees of freedom (n_subjects - 1) of the one-sided t-test
         """
-        if mode not in ("fisher-exact", "average"):
+        if mode not in ("fisher-exact", "average-logOdds-subject", "average-pvalue-vocalizer"):
             raise ValueError
 
         means = []
         sems = []
         pvalues = []
         tstats = []
-
+        dofs = []
+        sub_pvalues = []
+        
         if mode == "fisher-exact":
-            # This mode computes p(int) by using the fisher exact test on each
-            # subject for each informative trial bin. This measure is biased when
+            # This mode perforrms the fisher exact test for each subject based on the
+            # total number of interrupts and a single fisher exact test given all the data.
+            
+            # This measure is biased when
             # interruption rates are low, becauase each vocalizers are under-represented
             # in the contingency matrix when their interruption rates are low (few
             # trials within each informative trial bin)
@@ -459,10 +508,38 @@ class Tsvk:
             # of computing logOR in an informative trial bin.
 
             for k in self.k:
-                odds_ratios = np.array([
-                    self.fisher_exact(subject, k=k, side="greater")[0]
-                    for subject in self.subjects
-                ])
+                pvalueSubjects = np.zeros(len(self.subjects))
+                tableAll = np.zeros((2,2))
+                for i, subject in enumerate(self.subjects):
+                    odds_ratio, ci, pvalueSubject, table = self.fisher_exact(subject, k=k, side="greater")  
+                    pvalueSubjects[i] = pvalueSubject
+                    tableAll = tableAll + table
+            
+                odds_ratio, ci_95, pvalue, se = fisher_exact(tableAll)
+                mean = np.log2(odds_ratio)
+                sem = (1/np.log(2))*se
+
+
+                means.append(mean)
+                sems.append(sem)
+                pvalues.append(pvalue)
+                tstats.append([])
+                sub_pvalues.append(pvalueSubjects)
+                dofs.append([])
+
+        elif mode == "average-logOdds-subject":
+            # This mode computes the odds and thus the log odds by on a subject basis by
+            # summing all interrupted trials across all vocalizers.  
+   
+
+            for k in self.k:
+                odds_ratios = np.zeros(len(self.subjects))
+                for i, subject in enumerate(self.subjects):
+                    odds_ratio, ci, pvalueSubject, table = self.fisher_exact(subject, k=k, side="greater")  
+                    odds_ratios[i] = odds_ratio
+            
+                
+                # This averaging the log of odds ratio
                 log_odds_ratio = np.log2(odds_ratios)
 
                 if np.any(np.isnan(log_odds_ratio)):
@@ -481,8 +558,11 @@ class Tsvk:
                 sems.append(sem)
                 pvalues.append(pvalue)
                 tstats.append(tstat)
-                dof = None
-        else:
+                dofs.append(dof)
+                sub_pvalues.append([])
+
+                
+        elif mode == 'average-pvalue-vocalizer':
             for k in self.k:
                 log_odds_nore = np.log2(self.nore.odds_by_subjects(k)["Odds"])
                 log_odds_re = np.log2(self.re.odds_by_subjects(k)["Odds"])
@@ -505,14 +585,17 @@ class Tsvk:
                 sems.append(sem)
                 pvalues.append(pvalue)
                 tstats.append(tstat)
+                dofs.append(dof)
+                sub_pvalues.append([])
 
         return pd.DataFrame({
             "k": self.k,
             "logOR": means,
             "SE": sems,
             "pvalue": pvalues,
+            "Subject Pvalues": sub_pvalues,
             "tstat": tstats,
-            "dof": dof
+            "dof": dofs
         })
 
     def fisher_exact_by_subjects(self, k: int = None, side: str = "two.sided"):
@@ -520,13 +603,14 @@ class Tsvk:
         """
         rows = []
         for subject in self.subjects:
-            odds_ratio, ci, pvalue = self.fisher_exact(subject, k=k, side=side)
+            odds_ratio, ci, pvalue, table = self.fisher_exact(subject, k=k, side=side)
             rows.append({
                 "Subject": subject,
                 "logOR": np.log2(odds_ratio),
                 "95CI_low": np.log2(ci[0]),
                 "95CI_high": np.log2(ci[1]),
                 "pvalue": pvalue,
+                "table": table
             })
         return pd.DataFrame(rows)
 
@@ -576,5 +660,5 @@ class Tsvk:
             ]
         ])
 
-        odds_ratio, ci_95, p_value = fisher_exact(table)
-        return odds_ratio, ci_95, p_value
+        odds_ratio, ci_95, p_value, se = fisher_exact(table)
+        return odds_ratio, ci_95, p_value, table
