@@ -435,16 +435,37 @@ class Tsvk:
                         re_count=len(self.df[self.df["StimulusClass"] == "Rewarded"]),
                         nore_count=len(self.df[self.df["StimulusClass"] == "Nonrewarded"]),
                     ))
-
-        return pd.DataFrame({
-            "Subject": self.subjects,
-            "logOR": [
-                np.log2(self.nore.odds(subject, k)) - np.log2(self.re.odds(subject, k))
-                for subject in self.subjects
-            ],
-            "noreCounts": [self.nore.n(subject,k) for subject in self.subjects],
-            "reCounts": [self.re.n(subject, k) for subject in self.subjects]
-        })
+        
+        resultDict = { "Subject" : [],
+                     "logORp": [],
+                     "logORc": [],
+                     "noreCounts": [],
+                     "reCounts": []
+                     }
+        
+        for subject in self.subjects:
+            resultDict["Subject"].append(subject)
+            
+            noreOdds = self.nore.odds(subject, k)
+            reOdds = self.re.odds(subject, k)
+            resultDict["logORp"].append(np.log2(noreOdds/reOdds))
+    
+    
+            noreNint = self.nore.n(subject, k)[0]
+            if noreNint == 0:
+                noreNint = 0.5
+            noreNnoint = self.nore.n(subject, k)[1] - noreNint
+            reNint = self.re.n(subject, k)[0]
+            if reNint == 0:
+                reNint = 0.5           
+            reNnoint = self.re.n(subject, k)[1] - reNint
+            resultDict["logORc"].append(np.log2(noreNint*reNnoint/(noreNnoint*reNint)))
+            
+            resultDict["noreCounts"].append(self.nore.n(subject,k))
+            resultDict["reCounts"].append(self.re.n(subject,k))
+            
+    
+        return pd.DataFrame(resultDict)
  
             
     def logOR(self, mode='average-pvalue-vocalizer'):
