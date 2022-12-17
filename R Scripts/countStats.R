@@ -19,7 +19,7 @@ for (i in 1:n) {
 
 null_model <- glmer('cbind(ints, tots-ints) ~ Rewarded + ((1 + Rewarded)|Subject)', data = learning_curve_counts, family = binomial)
 k_model <- glmer('cbind(ints, tots-ints) ~ k*Rewarded + ((1 + Rewarded)|Subject)', data = learning_curve_counts, family = binomial)
-T_model <- glmer('cbind(ints, tots-ints) ~ Treatment*Rewarded + ((1 + Rewarded)|Subject)', data = learning_curve_counts, family = binomial)
+summaryT_model <- glmer('cbind(ints, tots-ints) ~ Treatment*Rewarded + ((1 + Rewarded)|Subject)', data = learning_curve_counts, family = binomial)
 Tandk_model <- glmer('cbind(ints, tots-ints) ~ (Treatment + k)*Rewarded + ((1 + Rewarded)|Subject)', data = learning_curve_counts, family = binomial)
 full_model <- glmer('cbind(ints, tots-ints) ~ Treatment*k*Rewarded + ((1 + Rewarded)|Subject)', data = learning_curve_counts, family = binomial)
 
@@ -74,4 +74,33 @@ log2OddsRatNCM <- (1/log(2))*(logOddnoreNCM-logOddreNCM)
 plot(kval, log2OddsRatCtrl, col = 'black', type = 'l' , ylim = c(-1,5))
 lines(kval, log2OddsRatHVC, col = 'pink')
 lines(kval, log2OddsRatNCM, col = 'green')
+
+# Repeat for pair-wise comparisons
+
+full_modelCtrlNCM <- glmer('cbind(ints, tots-ints) ~ Treatment*k*Rewarded + ((1 + Rewarded)|Subject)', 
+                           data = learning_curve_counts, family = binomial,
+                           subset = (learning_curve_counts$Treatment != 'HVC'))
+
+coefFullCtrlNCM <- full_modelCtrlNCM@beta
+# Control
+logOddnoreCtrl <- coefFullCtrlNCM[1] + kval*coefFullCtrlNCM[3] 
+logOddreCtrl <- coefFullCtrlNCM[1] + kval*coefFullCtrlNCM[3] + coefFullCtrlNCM[4] + kval*coefFullCtrlNCM[7]
+log2OddsRatCtrl <- (1/log(2))*(logOddnoreCtrl-logOddreCtrl)
+log2OddsRatCtrl <- (1/log(2))*(-coefFullCtrlNCM[4] - kval*coefFullCtrlNCM[7])
+
+logOddnoreNCM <- coefFullCtrlNCM[1] + coefFullCtrlNCM[2]+ kval*(coefFullCtrlNCM[3] + coefFullCtrlNCM[5])
+logOddreNCM <- coefFullCtrlNCM[1] + coefFullCtrlNCM[2] + kval*(coefFullCtrlNCM[3] + coefFullCtrlNCM[5]) +
+  (coefFullCtrlNCM[4] + coefFullCtrlNCM[6]) + kval*(coefFullCtrlNCM[7] + coefFullCtrlNCM[8])
+log2OddsRatNCM <- (1/log(2))*(logOddnoreNCM-logOddreNCM)
+log2OddsRatNCM <-  (1/log(2)) (-coefFullCtrlNCM[4] - coefFullCtrlNCM[6]) + kval*(-pcoefFullCtrlNCM[7] - coefFullCtrlNCM[8])
+
+plot(kval, log2OddsRatCtrl, col = 'black', type = 'l' , ylim = c(-1,5))
+lines(kval, log2OddsRatNCM, col = 'green')
+
+sum_full_modelCtrlNCM <- summary(full_modelCtrlNCM)
+print(sprintf('Intercept difference (Ctrl - NCM) = %.2f +- %.3f', (1/log(2))*coefFullCtrlNCM[6], (1/log(2))*sum_full_modelCtrlNCM$coefficients[6,'Std. Error'] ) )
+print(sprintf('                      Z = %.3f, p=%.4f', sum_full_modelCtrlNCN$coefficients[6,'z value'], sum_full_modelCtrlNCM$coefficients[6,'Pr(>|z|)']))
+
+print(sprintf('Slope difference (Ctrl - NCM) = %.2f +- %.3f', (1/log(2))*coefFullCtrlNCM[8], (1/log(2))*sum_full_modelCtrlNCM$coefficients[8,'Std. Error'] ) )
+print(sprintf('                      Z = %.3f, p=%.4f', sum_full_modelCtrlNCN$coefficients[8,'z value'], sum_full_modelCtrlNCM$coefficients[8,'Pr(>|z|)']))
 
