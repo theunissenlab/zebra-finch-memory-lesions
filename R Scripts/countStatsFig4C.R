@@ -61,3 +61,34 @@ print(sprintf('\t Log2(OR)= %.2f +- %.3f Z=%.3f p = %.4f',
               (1/log(2))*full_modelS$coefficients[4,2],
               full_modelS$coefficients[4,3],
               full_modelS$coefficients[4,4]))
+
+# Coefficients for the slopes and intercepts for Table 4.
+print(sprintf('Intercept of Control: %.2f +- %.2f', 
+              -(1/log(2))*sum_full_model$coefficients['RewardedTrue', 'Estimate'],
+              (1/log(2))*sum_full_model$coefficients['RewardedTrue', 'Std. Error']))
+
+print(sprintf('Slope of Control: %.2f +- %.2f', 
+              -(1/log(2))*sum_full_model$coefficients['k:RewardedTrue', 'Estimate'],
+              (1/log(2))*sum_full_model$coefficients['k:RewardedTrue', 'Std. Error']))
+
+k_model <- glmer('cbind(ints, tots-ints) ~ k*Rewarded + ((1 + Rewarded*k)|Subject)', data = learning_curve_counts, family = binomial, subset = (learning_curve_counts$Treatment == 'NCM'))
+sum_k_model <- summary(k_model)
+print(sprintf('Intercept of NCM: %.2f +- %.2f', 
+              -(1/log(2))*sum_k_model$coefficients['RewardedTrue', 'Estimate'],
+              (1/log(2))*sum_k_model$coefficients['RewardedTrue', 'Std. Error']))
+
+print(sprintf('Slope of NCM: %.2f +- %.2f', 
+              -(1/log(2))*sum_k_model$coefficients['k:RewardedTrue', 'Estimate'],
+              (1/log(2))*sum_k_model$coefficients['k:RewardedTrue', 'Std. Error']))
+
+# Does one get the same result from the full model?
+print(sprintf('Intercept of NCM (from Full Model): %.2f +- %.2f', 
+              -(1/log(2))*(sum_full_model$coefficients['RewardedTrue', 'Estimate'] + sum_full_model$coefficients['TreatsNCM:RewardedTrue', 'Estimate']) ,
+              (1/log(2))*sum_full_model$coefficients['TreatsNCM:RewardedTrue', 'Std. Error']))
+
+print(sprintf('Slope of NCM: %.2f +- %.2f', 
+              -(1/log(2))*(sum_full_model$coefficients['k:RewardedTrue', 'Estimate'] + sum_full_model$coefficients['TreatsNCM:k:RewardedTrue', 'Estimate']),
+              (1/log(2))*sum_full_model$coefficients['TreatsNCM:k:RewardedTrue', 'Std. Error']))
+
+
+

@@ -189,8 +189,40 @@ log2OddsRatNCM <- (1/log(2))*(logOddnoreHVC-logOddreHVC)
 log2OddsRatNCM <-  (1/log(2))*(-coefFull[4] - coefFull[6]) + kval*(-coefFull[7] - coefFull[8])
 
 
+plot(kval, log2OddsRatCtrl, col = 'black', type = 'l' , ylim = c(-1,5))
+lines(kval, log2OddsRatNCM, col = 'pink')
+
+
 sum_full_model <- summary(full_model)
 
 print(sprintf('Intercept difference (NCM - HVC+Ctrl) = %.2f +- %.3f', (1/log(2))*coefFull[6], (1/log(2))*sum_full_model$coefficients[6,'Std. Error'] ) )
 print(sprintf('                      Z = %.3f, p=%.4f', sum_full_model$coefficients[6,'z value'], sum_full_model$coefficients[6,'Pr(>|z|)']))
+
+# Coefficients for the slopes and intercepts for Table 4.
+print(sprintf('Intercept of Control: %.2f +- %.2f', 
+      -(1/log(2))*sum_full_model$coefficients['RewardedTrue', 'Estimate'],
+      (1/log(2))*sum_full_model$coefficients['RewardedTrue', 'Std. Error']))
+
+print(sprintf('Slope of Control: %.2f +- %.2f', 
+              -(1/log(2))*sum_full_model$coefficients['k:RewardedTrue', 'Estimate'],
+              (1/log(2))*sum_full_model$coefficients['k:RewardedTrue', 'Std. Error']))
+
+k_model <- glmer('cbind(ints, tots-ints) ~ k*Rewarded + ((1 + Rewarded*k)|Subject)', data = learning_curve_counts, family = binomial, subset = (learning_curve_counts$Treatment == 'NCM'))
+sum_k_model <- summary(k_model)
+print(sprintf('Intercept of NCM: %.2f +- %.2f', 
+              -(1/log(2))*sum_k_model$coefficients['RewardedTrue', 'Estimate'],
+              (1/log(2))*sum_k_model$coefficients['RewardedTrue', 'Std. Error']))
+
+print(sprintf('Slope of NCM: %.2f +- %.2f', 
+              -(1/log(2))*sum_k_model$coefficients['k:RewardedTrue', 'Estimate'],
+              (1/log(2))*sum_k_model$coefficients['k:RewardedTrue', 'Std. Error']))
+
+# Does one get the same result from the full model?
+print(sprintf('Intercept of NCM (from Full Model): %.2f +- %.2f', 
+              -(1/log(2))*(sum_full_model$coefficients['RewardedTrue', 'Estimate'] + sum_full_model$coefficients['TreatsNCM:RewardedTrue', 'Estimate']) ,
+              (1/log(2))*sum_full_model$coefficients['TreatsNCM:RewardedTrue', 'Std. Error']))
+
+print(sprintf('Slope of NCM: %.2f +- %.2f', 
+              -(1/log(2))*(sum_full_model$coefficients['k:RewardedTrue', 'Estimate'] + sum_full_model$coefficients['TreatsNCM:k:RewardedTrue', 'Estimate']),
+              (1/log(2))*sum_full_model$coefficients['TreatsNCM:k:RewardedTrue', 'Std. Error']))
 
