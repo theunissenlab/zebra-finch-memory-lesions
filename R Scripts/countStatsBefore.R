@@ -5,7 +5,7 @@ library(stringr)
 
 # Read the data frame.
 
-fileIn <- '/Users/frederictheunissen/Code/zebra-finch-memory-lesions/data/behavior/before_d1Count.csv'
+fileIn <- '/Users/frederictheunissen/Code/zebra-finch-memory-lesions/data/behavior/before_d2Count.csv'
 learning_curve_counts <- read.csv(fileIn)
 
 # make new colums for the count of interruption
